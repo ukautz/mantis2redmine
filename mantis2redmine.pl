@@ -407,8 +407,10 @@ User interactive.
 sub import_versions {
     my %mantis = map {
         $_->{ name } = substr( delete $_->{ version }, 0, 30 );
+        $_->{ released } = delete $_->{ released };
+        $_->{ date } = delete $_->{ date };
         ( $_->{ id } => $_ );
-    } $dbix_mantis->query( 'SELECT id, version, description, project_id FROM mantis_project_version_table' )->hashes;
+    } $dbix_mantis->query( 'SELECT id, version, description, project_id, DATE_FORMAT( date, \'%Y-%m-%d\' ) as date, released FROM mantis_project_version_table' )->hashes;
     
     my %redmine = map {
         ( $_->{ id } => $_ );
@@ -668,10 +670,16 @@ sub perform_import {
             delete $new_ref->{ id };
             my $project_id = $map_ref->{ projects }->{ delete $new_ref->{ project_id } };
             
+            my $releasedString = ($new_ref->{ released } == 1) ? 'closed' : 'open';
+            #print "version $new_ref->{ name  } / $releasedString / $new_ref->{ date }\n";
+            
             unless ( $DRY ) {
                 $dbix_redmine->insert( versions => {
-                    %$new_ref, # name, description
-                    project_id => $project_id
+                    name            => $new_ref->{ name },
+                    description     => $new_ref->{ description },
+                    project_id      => $project_id,
+                    status          => ($new_ref->{ released }) ? 'closed' : 'open',
+                    effective_date  => $new_ref->{ date }
                 } );
                 ( $map_ref->{ versions }->{ $old_id } ) = $dbix_redmine->query( 'SELECT MAX(id) FROM versions' )->list;
                 $version_map{ $new_ref->{ name } } = $map_ref->{ versions }->{ $old_id };
