@@ -42,11 +42,17 @@ You already ran this script once (eg in dry-run-mode). It will create store-<nam
 
 =head1 AUTHOR
 
-Ulrich Kautz <uk@fortrabbit.de>
+=over
+
+=item * Ulrich Kautz <uk@fortrabbit.de>
+
+=item * Philipp Schüle <p.schuele@metaways.de>
+
+=back
 
 =head1 COPYRIGHT
 
-Copyright (c) 2010. Ulrich Kautz
+Copyright (c) 2010. See L</AUTHOR>
 
 This program is free software; you can redistribute it and/or modify it under the same terms as Perl itself.
 
@@ -56,7 +62,7 @@ See http://www.perl.com/perl/misc/Artistic.html
 
 None. Make a backup!
 
-=head1 MODIFIED
+=head1 Changelog
 
 modified by Philipp Schüle <p.schuele@metaways.de>
 
@@ -81,7 +87,7 @@ use DBIx::Simple;
 use Data::Dumper;
 use YAML;
 
-our $VERSION = '0.3';
+use version 0.74; our $VERSION = qv(v0.3.1);
 
 # Unbuffered output
 $| = 1;
@@ -106,6 +112,8 @@ GetOptions(
     
     "load_maps"  => \( $opt{ load_maps } ),
     "config|c=s" => \( $opt{ config } = "" ), 
+    
+    "category-source" => \( $opt{ category_source } = "categories" ),
     
     "attachment_dir=s" => \( $opt{ attachment_dir } = "attachments" )
 );
@@ -134,6 +142,12 @@ Options
     --attachment_dir <path>
         Direcory for outputting any attachment file.
         default: attachments (in current dir)
+    
+    Import flavor:
+    --category-source <source>
+        You can either use "categories" or "trackers" as source for your
+        newly created redmine categories.
+        Default: "categories"
     
     Mantis Database:
     --mantis_db_host <hostname>
@@ -169,7 +183,12 @@ foreach my $type( qw/ mantis redmine / ) {
 die "Missing: \n  ". join( ", ", @check_err ). "\nUse --help for all options\n" if @check_err;
 
 # check attachment table
-die "No such directory '$opt{ attachment_dir }'.. please created!\n" unless (-d $opt{ attachment_dir } || $opt{ attachments_in_db });
+die "No such directory '$opt{ attachment_dir }'.. please created!\n"
+    unless (-d $opt{ attachment_dir } || $opt{ attachments_in_db });
+
+# check category-source
+die "Not allowed --category-source '$opt{ category_source }', use one of 'categories' or 'trackers'\n"
+    unless $opt{ category_source } =~ /^(?:categories|trackers)$/;
 
 # display warning
 unless ( $DRY || read_in( "Are you sure you? Do you have a backup of your important data?\n  eg: mysqldump --add-drop-table --lock-tables --complete-insert --create-options -u$opt{ redmine_db_login } -p$opt{ redmine_db_pass } -h$opt{ redmine_db_host } $opt{ redmine_db_name }\nType uppercase YES if you want to continue" ) eq "YES" ) {
@@ -193,8 +212,16 @@ my $dbix_redmine = DBIx::Simple->connect(
 
 # import mappings
 my %map = ();
-#foreach my $import( qw/ stati priorities roles custom_fields relations projects versions trackers users / ) {
-foreach my $import( qw/ stati priorities roles custom_fields relations projects versions categories users / ) {
+
+# build list of import modules
+my @import_modules = (
+    qw/ stati priorities roles custom_fields relations projects versions /,
+    $opt{ category_source },
+    qw/ users /
+);
+
+# run import
+foreach my $import( @import_modules ) {
     my $meth = "import_$import";
     print " *** ". ucfirst( $import ). " ***\n\n";
     {
@@ -448,32 +475,32 @@ User interactive.
 
 =cut
 
-#sub import_trackers {
-#    my %mantis = map {
-#        ( $_->{ id } => $_ );
-#    } $dbix_mantis->query( 'SELECT id, name, project_id FROM mantis_category_table' )->hashes;
-#    
-#    my %redmine = map {
-#        ( $_->{ id } => $_ );
-#    } $dbix_redmine->query( 'SELECT id, name FROM trackers' )->hashes;
-#    my ( $first_id ) = sort keys %redmine;
-#    
-#    my $mantis_ref = { map {
-#        ( $_ => [ $mantis{ $_ }->{ name }, { name => 'new', id => -1 } ] )
-#    } keys %mantis };
-#    my $redmine_ref = { map {
-#        ( $_ => $redmine{ $_ } )
-#    } keys %redmine };
-#    premap( $mantis_ref, $redmine_ref, 'name' );
-#    
-#    my $new_ref = create_map( 'Tracker', $mantis_ref, $redmine_ref, $redmine{ $first_id }, 'id', {
-#        allow_new     => 1,
-#        print_mantis  => 1,
-#        print_redmine => 1
-#    } );
-#    
-#    return update_maps( $new_ref, \%mantis );
-#}
+sub import_trackers {
+    my %mantis = map {
+        ( $_->{ id } => $_ );
+    } $dbix_mantis->query( 'SELECT id, name, project_id FROM mantis_category_table' )->hashes;
+    
+    my %redmine = map {
+        ( $_->{ id } => $_ );
+    } $dbix_redmine->query( 'SELECT id, name FROM trackers' )->hashes;
+    my ( $first_id ) = sort keys %redmine;
+    
+    my $mantis_ref = { map {
+        ( $_ => [ $mantis{ $_ }->{ name }, { name => 'new', id => -1 } ] )
+    } keys %mantis };
+    my $redmine_ref = { map {
+        ( $_ => $redmine{ $_ } )
+    } keys %redmine };
+    premap( $mantis_ref, $redmine_ref, 'name' );
+    
+    my $new_ref = create_map( 'Tracker', $mantis_ref, $redmine_ref, $redmine{ $first_id }, 'id', {
+       allow_new     => 1,
+       print_mantis  => 1,
+       print_redmine => 1
+    } );
+    
+    return update_maps( $new_ref, \%mantis );
+}
 
 =head2 import_categories
 
@@ -700,85 +727,91 @@ sub perform_import {
     }
     print "OK\n";
     
-#    print "Import Trackers\n";
-#    my @project_ids = $dbix_redmine->query( 'SELECT id FROM projects' )->flat;
-#    while( my ( $old_id, $new_ref ) = each %{ $map_ref->{ trackers } } ) {
-#        print ".";
-#        
-#        # create new tracker
-#        if ( $new_ref->{ id } == -1 ) {
-#            delete $new_ref->{ id };
-#            
-#            # get tracker probs
-#            my $name       = delete $new_ref->{ name };
-#            my $project_id = delete $new_ref->{ project_id };
-#            my ( $position ) = $dbix_redmine->query( 'SELECT MAX(position)+1 FROM trackers' )->list;
-#            
-#            unless ( $DRY ) {
-#                
-#                # create tracker
-#                $dbix_redmine->insert( trackers => {
-#                    name          => $name,
-#                    position      => $position,
-#                    is_in_roadmap => 0,
-#                    is_in_chlog   => 0,
-#                } );
-#                ( $map_ref->{ trackers }->{ $old_id } ) = $dbix_redmine->query( 'SELECT MAX(id) FROM trackers' )->list;
-#                
-#                # link tracker to project(s)
-#                my @insert = $project_id == 0 ? @project_ids : ( $map_ref->{ projects }->{ $project_id } );
-#                foreach my $insert( @insert ) {
-#                    $dbix_redmine->insert( projects_trackers => {
-#                        project_id => $insert,
-#                        tracker_id => $map_ref->{ trackers }->{ $old_id }
-#                    } );
-#                }
-#            }
-#            
-#            $report{ trackers_created } ++;
-#        }
-#        
-#        # use existing
-#        else {
-#            $map_ref->{ trackers }->{ $old_id } = $new_ref->issue_categories{ id };
-#            $report{ trackers_migrated } ++;
-#        }
-#    }
-#    print "OK\n";
-
-    print "Import Categories\n";
-    my @category_ids = $dbix_redmine->query( 'SELECT id FROM issue_categories' )->flat;
-    while( my ( $old_id, $new_ref ) = each %{ $map_ref->{ categories } } ) {
-        print ".";
-        
-        # create new category
-        if ( $new_ref->{ id } == -1 ) {
-            delete $new_ref->{ id };
+    # use Trackers -> Categories
+    if ( $opt{ category_source } eq 'trackers' ) {
+        print "Import Trackers\n";
+        my @project_ids = $dbix_redmine->query( 'SELECT id FROM projects' )->flat;
+        while( my ( $old_id, $new_ref ) = each %{ $map_ref->{ trackers } } ) {
+            print ".";
             
-            # get category probs
-            my $name       = delete $new_ref->{ name };
-            my $project_id = delete $new_ref->{ project_id };
-            
-            unless ( $DRY ) {
+            # create new tracker
+            if ( $new_ref->{ id } == -1 ) {
+                delete $new_ref->{ id };
                 
-                # create category
-                $dbix_redmine->insert( issue_categories => {
-                    name          => $name,
-                    project_id    => $project_id
-                } );
-                ( $map_ref->{ categories }->{ $old_id } ) = $dbix_redmine->query( 'SELECT MAX(id) FROM issue_categories' )->list;
+                # get tracker probs
+                my $name       = delete $new_ref->{ name };
+                my $project_id = delete $new_ref->{ project_id };
+                my ( $position ) = $dbix_redmine->query( 'SELECT MAX(position)+1 FROM trackers' )->list;
+                
+                unless ( $DRY ) {
+                    
+                    # create tracker
+                    $dbix_redmine->insert( trackers => {
+                        name          => $name,
+                        position      => $position,
+                        is_in_roadmap => 0,
+                        is_in_chlog   => 0,
+                    } );
+                    ( $map_ref->{ trackers }->{ $old_id } ) = $dbix_redmine->query( 'SELECT MAX(id) FROM trackers' )->list;
+                    
+                    # link tracker to project(s)
+                    my @insert = $project_id == 0 ? @project_ids : ( $map_ref->{ projects }->{ $project_id } );
+                    foreach my $insert( @insert ) {
+                        $dbix_redmine->insert( projects_trackers => {
+                            project_id => $insert,
+                            tracker_id => $map_ref->{ trackers }->{ $old_id }
+                        } );
+                    }
+                }
+                
+                $report{ trackers_created } ++;
             }
             
-            $report{ categories_created } ++;
+            # use existing
+            else {
+                $map_ref->{ trackers }->{ $old_id } = $new_ref->{ id };
+                $report{ trackers_migrated } ++;
+            }
         }
-        
-        # use existing
-        else {
-            $map_ref->{ categories }->{ $old_id } = $new_ref->{ id };
-            $report{ categories_migrated } ++;
-        }
+        print "OK\n";
     }
-    print "OK\n";
+    
+    # use Categories -> Categories (default)
+    else {
+        print "Import Categories\n";
+        my @category_ids = $dbix_redmine->query( 'SELECT id FROM issue_categories' )->flat;
+        while( my ( $old_id, $new_ref ) = each %{ $map_ref->{ categories } } ) {
+            print ".";
+            
+            # create new category
+            if ( $new_ref->{ id } == -1 ) {
+                delete $new_ref->{ id };
+                
+                # get category probs
+                my $name       = delete $new_ref->{ name };
+                my $project_id = delete $new_ref->{ project_id };
+                
+                unless ( $DRY ) {
+                    
+                    # create category
+                    $dbix_redmine->insert( issue_categories => {
+                        name          => $name,
+                        project_id    => $project_id
+                    } );
+                    ( $map_ref->{ categories }->{ $old_id } ) = $dbix_redmine->query( 'SELECT MAX(id) FROM issue_categories' )->list;
+                }
+                
+                $report{ categories_created } ++;
+            }
+            
+            # use existing
+            else {
+                $map_ref->{ categories }->{ $old_id } = $new_ref->{ id };
+                $report{ categories_migrated } ++;
+            }
+        }
+        print "OK\n";
+    }
     
     
     # now the hard part .. import all issues!
@@ -896,35 +929,35 @@ SQLNOTES
         # insert attachments
         if (! $opt{ attachments_in_db } ) {
             my $attachments = $dbix_mantis->query( $attachments_sql, $issue_ref->{ id } );
-	        while ( my $attachment_ref = $attachments->hash ) {
-	            # we have the attachments in the db -> exit
-	            last;
-	            print "+";
-	            
-	            unless ( $DRY ) {
-	                
-	                # write file to disk
-	                my $filename = "$attachment_ref->{ diskfile }_$attachment_ref->{ filename }";
-	                my $output = "$opt{ attachment_dir }/$filename";
-	                open my $fh, '>', $output or die "Cannot open attachment file '$output' for write: $!";
-	                binmode $fh;
-	                print $fh delete $attachment_ref->{ content };
-	                close $fh;
-	                
-	                # insert
-	                $dbix_redmine->insert( attachments => {
-	                    container_id   => $issue_id,
-	                    container_type => 'Issue',
-	                    filename       => $attachment_ref->{ filename },
-	                    disk_filename  => $filename,
-	                    filesize       => -s $output,
-	                    content_type   => $attachment_ref->{ file_type },
-	                    created_on     => $attachment_ref->{ created_on },
-	                    author_id      => $admin_id
-	                } );
-	            }
-	            $report{ attachments_created } ++;
-	        }
+            while ( my $attachment_ref = $attachments->hash ) {
+                # we have the attachments in the db -> exit
+                last;
+                print "+";
+                
+                unless ( $DRY ) {
+                    
+                    # write file to disk
+                    my $filename = "$attachment_ref->{ diskfile }_$attachment_ref->{ filename }";
+                    my $output = "$opt{ attachment_dir }/$filename";
+                    open my $fh, '>', $output or die "Cannot open attachment file '$output' for write: $!";
+                    binmode $fh;
+                    print $fh delete $attachment_ref->{ content };
+                    close $fh;
+                    
+                    # insert
+                    $dbix_redmine->insert( attachments => {
+                        container_id   => $issue_id,
+                        container_type => 'Issue',
+                        filename       => $attachment_ref->{ filename },
+                        disk_filename  => $filename,
+                        filesize       => -s $output,
+                        content_type   => $attachment_ref->{ file_type },
+                        created_on     => $attachment_ref->{ created_on },
+                        author_id      => $admin_id
+                    } );
+                }
+                $report{ attachments_created } ++;
+            }
         } else {
         	# we have the attachments in the db -> exit
         }
@@ -1040,7 +1073,7 @@ SQLRELATIONS
     printf "%-40s : %5d / %5d\n", 'Users (migrated/created)', $report{ users_migrated } || 0, $report{ users_created } || 0;
     printf "%-40s : %5d / %5d\n", 'Projects (migrated/created)', $report{ projects_migrated } || 0, $report{ projects_created } || 0;
     printf "%-40s : %5d / %5d\n", 'Versions (migrated/created)', $report{ versions_migrated } || 0, $report{ versions_created } || 0;
-    #printf "%-40s : %5d / %5d\n", 'Trackers (migrated/created)', $report{ trackers_migrated } || 0, $report{ trackers_created } || 0;
+    printf "%-40s : %5d / %5d\n", 'Trackers (migrated/created)', $report{ trackers_migrated } || 0, $report{ trackers_created } || 0;
     printf "%-40s : %5d / %5d\n", 'Categories (migrated/created)', $report{ categories_migrated } || 0, $report{ categories_created } || 0;
     printf "%-40s : %5d\n", 'Issues imported', $report{ issues_created } || 0;
     printf "%-40s : %5d\n", 'Journals imported', $report{ journals_created } || 0;
