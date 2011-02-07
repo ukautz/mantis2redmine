@@ -9,6 +9,13 @@ modified by Philipp Schüle to allow to
     - use severity column to determine the tracker (feature/bug)
     - skip attachments because they might be  in the DB
 
+config.txt
+    - added 3 more config options:
+        -> tracker_id_feature = 1   # to automatically assign issues with (mantis) severity "feature" to redmine tracker with id 1 
+        -> tracker_id_bug = 2       # to automatically assign issues with other severity to redmine tracker with id 2
+        -> attachments_in_db = 1    # skip attachments as they are saved in the mantis db
+
 TODO
     - make it possible to switch between categories -> categories / categories -> tracker import (via config/cli param)
+    - get attachment files from mantis db 
     
