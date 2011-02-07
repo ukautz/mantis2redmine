@@ -1151,8 +1151,8 @@ sub create_map {
     my $request_new = $args_ref->{ allow_new } ? " or num:-1 for create as new " : "";
     push @request,"Type 'ok' if you confirm or num:num ${request_new}to change assignment";
     
-    my $name = $default_ref->{ name } || $default_ref->{ login };
-    push @request,"  eg $last_mantis:$default_ref->{ $key } to change $name of '$mantis_ref->{ $last_mantis }->[0]' to '$name'";
+    my $myname = $default_ref->{ name } || $default_ref->{ login };
+    push @request,"  eg $last_mantis:$default_ref->{ $key } to change $name of '$mantis_ref->{ $last_mantis }->[0]' to '$myname'";
     push @request, "  type 'print' to show the Redmine/Mantis tabels again";
     push @request, "(ok/num:num/print)";
     my $request = join( "\n", @request );
