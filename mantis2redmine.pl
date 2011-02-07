@@ -9,8 +9,8 @@ mantis2redmine.pl - Import Mantis database into Redmine
 This script imports provided Mantis database into existing Redmine database without destroying existing content in the redmine database. The idea is a non-destructive migration. Via user interaction re-mappings of mantis users, priojects and so on to Redmine equivalents can be performed.
 
 Tested with: 
-    Redmine 0.9.3 stable
-    Mantis 1.2.0 stable
+    Redmine 0.9.3-1 stable
+    Mantis 1.2.4 stable
 
 Inspired by "migrate_from_mantis.rake" from the Redmine project.
 
@@ -56,6 +56,18 @@ See http://www.perl.com/perl/misc/Artistic.html
 
 None. Make a backup!
 
+=head1 MODIFIED
+
+modified by Philipp Schüle <p.schuele@metaways.de>
+
+did the following:
+    - import categories / do not use the trackers as categories
+    - use severity column to determine the tracker
+    - skip attachments because they might be  in the DB
+
+TODO
+    - make it possible to switch between categories -> categories / categories -> tracker import (via config/cli param)
+
 =cut
 
 
@@ -69,7 +81,7 @@ use DBIx::Simple;
 use Data::Dumper;
 use YAML;
 
-our $VERSION = '0.2';
+our $VERSION = '0.3';
 
 # Unbuffered output
 $| = 1;
@@ -425,7 +437,6 @@ sub import_versions {
     return update_maps( $new_ref, \%mantis );
 }
 
-
 =head2 import_trackers
 
 Maps Mantis categories to Redmine trackers.
@@ -460,7 +471,6 @@ sub import_trackers {
     
     return update_maps( $new_ref, \%mantis );
 }
-
 
 =head2 import_users
 
