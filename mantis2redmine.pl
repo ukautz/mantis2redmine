@@ -169,7 +169,7 @@ foreach my $type( qw/ mantis redmine / ) {
 die "Missing: \n  ". join( ", ", @check_err ). "\nUse --help for all options\n" if @check_err;
 
 # check attachment table
-die "No such directory '$opt{ attachment_dir }'.. please created!\n" unless -d $opt{ attachment_dir };
+die "No such directory '$opt{ attachment_dir }'.. please created!\n" unless (-d $opt{ attachment_dir } || $opt{ attachments_in_db });
 
 # display warning
 unless ( $DRY || read_in( "Are you sure you? Do you have a backup of your important data?\n  eg: mysqldump --add-drop-table --lock-tables --complete-insert --create-options -u$opt{ redmine_db_login } -p$opt{ redmine_db_pass } -h$opt{ redmine_db_host } $opt{ redmine_db_name }\nType uppercase YES if you want to continue" ) eq "YES" ) {
@@ -804,33 +804,39 @@ SQLNOTES
         }
         
         # insert attachments
-        my $attachments = $dbix_mantis->query( $attachments_sql, $issue_ref->{ id } );
-        while ( my $attachment_ref = $attachments->hash ) {
-            print "+";
-            
-            unless ( $DRY ) {
-                
-                # write file to disk
-                my $filename = "$attachment_ref->{ diskfile }_$attachment_ref->{ filename }";
-                my $output = "$opt{ attachment_dir }/$filename";
-                open my $fh, '>', $output or die "Cannot open attachment file '$output' for write: $!";
-                binmode $fh;
-                print $fh delete $attachment_ref->{ content };
-                close $fh;
-                
-                # insert
-                $dbix_redmine->insert( attachments => {
-                    container_id   => $issue_id,
-                    container_type => 'Issue',
-                    filename       => $attachment_ref->{ filename },
-                    disk_filename  => $filename,
-                    filesize       => -s $output,
-                    content_type   => $attachment_ref->{ file_type },
-                    created_on     => $attachment_ref->{ created_on },
-                    author_id      => $admin_id
-                } );
-            }
-            $report{ attachments_created } ++;
+        if (! $opt{ attachments_in_db } ) {
+            my $attachments = $dbix_mantis->query( $attachments_sql, $issue_ref->{ id } );
+	        while ( my $attachment_ref = $attachments->hash ) {
+	            # we have the attachments in the db -> exit
+	            last;
+	            print "+";
+	            
+	            unless ( $DRY ) {
+	                
+	                # write file to disk
+	                my $filename = "$attachment_ref->{ diskfile }_$attachment_ref->{ filename }";
+	                my $output = "$opt{ attachment_dir }/$filename";
+	                open my $fh, '>', $output or die "Cannot open attachment file '$output' for write: $!";
+	                binmode $fh;
+	                print $fh delete $attachment_ref->{ content };
+	                close $fh;
+	                
+	                # insert
+	                $dbix_redmine->insert( attachments => {
+	                    container_id   => $issue_id,
+	                    container_type => 'Issue',
+	                    filename       => $attachment_ref->{ filename },
+	                    disk_filename  => $filename,
+	                    filesize       => -s $output,
+	                    content_type   => $attachment_ref->{ file_type },
+	                    created_on     => $attachment_ref->{ created_on },
+	                    author_id      => $admin_id
+	                } );
+	            }
+	            $report{ attachments_created } ++;
+	        }
+        } else {
+        	# we have the attachments in the db -> exit
         }
     }
     print "OK\n";
