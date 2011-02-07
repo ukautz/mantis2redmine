@@ -1,0 +1,20 @@
+2011-02-07 Ulrich Kautz <ulrich.kautz@googlemail.com>
+
+* Merge fork from pschuele
+* Make categories and trackers available equally through new parameter:
+  --category-source (default: categories)
+
+
+2011-02-07 Philipp Schüle <p.schuele@metaways.de>
+
+* import categories / do not use the trackers as categories
+* use severity column to determine the tracker
+* skip attachments because they might be  in the DB
+
+TODO
+* make it possible to switch between categories -> categories / categories -> tracker import (via config/cli param
+
+2011-02-02 Ulrich Kautz <ulrich.kautz@googlemail.com>
+
+* Initial release on githhub
+
