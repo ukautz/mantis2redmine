@@ -792,6 +792,7 @@ SELECT
     b.priority,
     b.status,
     b.target_version,
+    b.severity,
     b.category_id,
     b.summary AS `subject`,
     DATE_FORMAT( FROM_UNIXTIME( b.date_submitted ), '%Y-%m-%d %T' ) AS `created_on`,
@@ -837,14 +838,20 @@ SQLNOTES
         print ".";
         
         my $issue_id;
-        #print "$issue_ref->{ id }: $issue_ref->{ target_version } -> $version_map{ $issue_ref->{ target_version } }\n" if $issue_ref->{ target_version };
         
+        #print "$issue_ref->{ id }: $issue_ref->{ target_version } -> $version_map{ $issue_ref->{ target_version } }\n" if $issue_ref->{ target_version };
+        #print "is feature: $issue_ref->{ subject } ( $opt{ tracker_id_feature } )\n" if ($issue_ref->{ severity } == 10);
+        
+        my $trackerIdFeature = ($opt{ tracker_id_feature }) ? $opt{ tracker_id_feature } : 1;
+        my $trackerIdBug = ($opt{ tracker_id_bug }) ? $opt{ tracker_id_bug } : 2;
         
         unless ( $DRY ) {
             # insert
             $dbix_redmine->insert( issues => my $ref = {
-                tracker_id       => $map_ref->{ trackers }->{ $issue_ref->{ category_id } },
+            	# severity 10 => feature / alle anderen -> bug
+                tracker_id       => ($issue_ref->{ severity } == 10) ? $trackerIdFeature : $trackerIdBug,
                 project_id       => $map_ref->{ projects }->{ $issue_ref->{ project_id } },
+                category_id      => $map_ref->{ projects }->{ $issue_ref->{ category_id } },
                 subject          => $issue_ref->{ subject },
                 description      => $issue_ref->{ description },
                 status_id        => $map_ref->{ stati }->{ $issue_ref->{ status } }->{ id },
