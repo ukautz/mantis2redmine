@@ -193,7 +193,8 @@ my $dbix_redmine = DBIx::Simple->connect(
 
 # import mappings
 my %map = ();
-foreach my $import( qw/ stati priorities roles custom_fields relations projects versions trackers users / ) {
+#foreach my $import( qw/ stati priorities roles custom_fields relations projects versions trackers users / ) {
+foreach my $import( qw/ stati priorities roles custom_fields relations projects versions categories users / ) {
     my $meth = "import_$import";
     print " *** ". ucfirst( $import ). " ***\n\n";
     {
@@ -445,14 +446,49 @@ User interactive.
 
 =cut
 
-sub import_trackers {
+#sub import_trackers {
+#    my %mantis = map {
+#        ( $_->{ id } => $_ );
+#    } $dbix_mantis->query( 'SELECT id, name, project_id FROM mantis_category_table' )->hashes;
+#    
+#    my %redmine = map {
+#        ( $_->{ id } => $_ );
+#    } $dbix_redmine->query( 'SELECT id, name FROM trackers' )->hashes;
+#    my ( $first_id ) = sort keys %redmine;
+#    
+#    my $mantis_ref = { map {
+#        ( $_ => [ $mantis{ $_ }->{ name }, { name => 'new', id => -1 } ] )
+#    } keys %mantis };
+#    my $redmine_ref = { map {
+#        ( $_ => $redmine{ $_ } )
+#    } keys %redmine };
+#    premap( $mantis_ref, $redmine_ref, 'name' );
+#    
+#    my $new_ref = create_map( 'Tracker', $mantis_ref, $redmine_ref, $redmine{ $first_id }, 'id', {
+#        allow_new     => 1,
+#        print_mantis  => 1,
+#        print_redmine => 1
+#    } );
+#    
+#    return update_maps( $new_ref, \%mantis );
+#}
+
+=head2 import_categories
+
+Maps Mantis categories to Redmine categories.
+
+User interactive.
+
+=cut
+
+sub import_categories {
     my %mantis = map {
         ( $_->{ id } => $_ );
     } $dbix_mantis->query( 'SELECT id, name, project_id FROM mantis_category_table' )->hashes;
     
     my %redmine = map {
         ( $_->{ id } => $_ );
-    } $dbix_redmine->query( 'SELECT id, name FROM trackers' )->hashes;
+    } $dbix_redmine->query( 'SELECT id, name FROM issue_categories' )->hashes;
     my ( $first_id ) = sort keys %redmine;
     
     my $mantis_ref = { map {
@@ -463,7 +499,12 @@ sub import_trackers {
     } keys %redmine };
     premap( $mantis_ref, $redmine_ref, 'name' );
     
-    my $new_ref = create_map( 'Tracker', $mantis_ref, $redmine_ref, $redmine{ $first_id }, 'id', {
+    my $default_ref = $first_id
+        ? $redmine{ $first_id }
+        : { id => -1, name => '*no category found in redmine*' }
+    ;
+    
+    my $new_ref = create_map( 'Category', $mantis_ref, $redmine_ref, $default_ref, 'id', {
         allow_new     => 1,
         print_mantis  => 1,
         print_redmine => 1
@@ -651,48 +692,82 @@ sub perform_import {
     }
     print "OK\n";
     
-    print "Import Trackers\n";
-    my @project_ids = $dbix_redmine->query( 'SELECT id FROM projects' )->flat;
-    while( my ( $old_id, $new_ref ) = each %{ $map_ref->{ trackers } } ) {
+#    print "Import Trackers\n";
+#    my @project_ids = $dbix_redmine->query( 'SELECT id FROM projects' )->flat;
+#    while( my ( $old_id, $new_ref ) = each %{ $map_ref->{ trackers } } ) {
+#        print ".";
+#        
+#        # create new tracker
+#        if ( $new_ref->{ id } == -1 ) {
+#            delete $new_ref->{ id };
+#            
+#            # get tracker probs
+#            my $name       = delete $new_ref->{ name };
+#            my $project_id = delete $new_ref->{ project_id };
+#            my ( $position ) = $dbix_redmine->query( 'SELECT MAX(position)+1 FROM trackers' )->list;
+#            
+#            unless ( $DRY ) {
+#                
+#                # create tracker
+#                $dbix_redmine->insert( trackers => {
+#                    name          => $name,
+#                    position      => $position,
+#                    is_in_roadmap => 0,
+#                    is_in_chlog   => 0,
+#                } );
+#                ( $map_ref->{ trackers }->{ $old_id } ) = $dbix_redmine->query( 'SELECT MAX(id) FROM trackers' )->list;
+#                
+#                # link tracker to project(s)
+#                my @insert = $project_id == 0 ? @project_ids : ( $map_ref->{ projects }->{ $project_id } );
+#                foreach my $insert( @insert ) {
+#                    $dbix_redmine->insert( projects_trackers => {
+#                        project_id => $insert,
+#                        tracker_id => $map_ref->{ trackers }->{ $old_id }
+#                    } );
+#                }
+#            }
+#            
+#            $report{ trackers_created } ++;
+#        }
+#        
+#        # use existing
+#        else {
+#            $map_ref->{ trackers }->{ $old_id } = $new_ref->issue_categories{ id };
+#            $report{ trackers_migrated } ++;
+#        }
+#    }
+#    print "OK\n";
+
+    print "Import Categories\n";
+    my @category_ids = $dbix_redmine->query( 'SELECT id FROM issue_categories' )->flat;
+    while( my ( $old_id, $new_ref ) = each %{ $map_ref->{ categories } } ) {
         print ".";
         
-        # create new tracker
+        # create new category
         if ( $new_ref->{ id } == -1 ) {
             delete $new_ref->{ id };
             
-            # get tracker probs
+            # get category probs
             my $name       = delete $new_ref->{ name };
             my $project_id = delete $new_ref->{ project_id };
-            my ( $position ) = $dbix_redmine->query( 'SELECT MAX(position)+1 FROM trackers' )->list;
             
             unless ( $DRY ) {
                 
-                # create tracker
-                $dbix_redmine->insert( trackers => {
+                # create category
+                $dbix_redmine->insert( issue_categories => {
                     name          => $name,
-                    position      => $position,
-                    is_in_roadmap => 0,
-                    is_in_chlog   => 0,
+                    project_id    => $project_id
                 } );
-                ( $map_ref->{ trackers }->{ $old_id } ) = $dbix_redmine->query( 'SELECT MAX(id) FROM trackers' )->list;
-                
-                # link tracker to project(s)
-                my @insert = $project_id == 0 ? @project_ids : ( $map_ref->{ projects }->{ $project_id } );
-                foreach my $insert( @insert ) {
-                    $dbix_redmine->insert( projects_trackers => {
-                        project_id => $insert,
-                        tracker_id => $map_ref->{ trackers }->{ $old_id }
-                    } );
-                }
+                ( $map_ref->{ categories }->{ $old_id } ) = $dbix_redmine->query( 'SELECT MAX(id) FROM issue_categories' )->list;
             }
             
-            $report{ trackers_created } ++;
+            $report{ categories_created } ++;
         }
         
         # use existing
         else {
-            $map_ref->{ trackers }->{ $old_id } = $new_ref->{ id };
-            $report{ trackers_migrated } ++;
+            $map_ref->{ categories }->{ $old_id } = $new_ref->{ id };
+            $report{ categories_migrated } ++;
         }
     }
     print "OK\n";
@@ -950,7 +1025,8 @@ SQLRELATIONS
     printf "%-40s : %5d / %5d\n", 'Users (migrated/created)', $report{ users_migrated } || 0, $report{ users_created } || 0;
     printf "%-40s : %5d / %5d\n", 'Projects (migrated/created)', $report{ projects_migrated } || 0, $report{ projects_created } || 0;
     printf "%-40s : %5d / %5d\n", 'Versions (migrated/created)', $report{ versions_migrated } || 0, $report{ versions_created } || 0;
-    printf "%-40s : %5d / %5d\n", 'Trackers (migrated/created)', $report{ trackers_migrated } || 0, $report{ trackers_created } || 0;
+    #printf "%-40s : %5d / %5d\n", 'Trackers (migrated/created)', $report{ trackers_migrated } || 0, $report{ trackers_created } || 0;
+    printf "%-40s : %5d / %5d\n", 'Categories (migrated/created)', $report{ categories_migrated } || 0, $report{ categories_created } || 0;
     printf "%-40s : %5d\n", 'Issues imported', $report{ issues_created } || 0;
     printf "%-40s : %5d\n", 'Journals imported', $report{ journals_created } || 0;
     printf "%-40s : %5d\n", 'Attachments imported', $report{ attachments_created } || 0;
