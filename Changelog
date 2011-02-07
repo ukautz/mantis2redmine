@@ -2,7 +2,7 @@
 
 * Merge fork from pschuele
 * Make categories and trackers available equally through new parameter:
-  --category-source (default: categories)
+  --category_source (default: categories)
 
 
 2011-02-07 Philipp Schüle <p.schuele@metaways.de>

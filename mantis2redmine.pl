@@ -113,7 +113,7 @@ GetOptions(
     "load_maps"  => \( $opt{ load_maps } ),
     "config|c=s" => \( $opt{ config } = "" ), 
     
-    "category-source" => \( $opt{ category_source } = "categories" ),
+    "category_source" => \( $opt{ category_source } = "categories" ),
     
     "attachment_dir=s" => \( $opt{ attachment_dir } = "attachments" )
 );
@@ -432,12 +432,13 @@ User interactive.
 =cut
 
 sub import_versions {
+    
+    #my $sql_version_table = 'SELECT id, version, description, project_id, DATE_FORMAT( date, \'%Y-%m-%d\' ) as date, released FROM mantis_project_version_table';
+    my $sql_version_table = 'SELECT id, version, description, project_id FROM mantis_project_version_table';
     my %mantis = map {
         $_->{ name } = substr( delete $_->{ version }, 0, 30 );
-        $_->{ released } = delete $_->{ released };
-        $_->{ date } = delete $_->{ date };
         ( $_->{ id } => $_ );
-    } $dbix_mantis->query( 'SELECT id, version, description, project_id, DATE_FORMAT( date, \'%Y-%m-%d\' ) as date, released FROM mantis_project_version_table' )->hashes;
+    } $dbix_mantis->query( $sql_version_table )->hashes;
     
     my %redmine = map {
         ( $_->{ id } => $_ );
