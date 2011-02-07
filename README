@@ -1,0 +1,10 @@
+Script to migrate mantis database to redmine
+--
+http://blog.foaa.de/2010/04/non-destructive-migration-from-mantis-to-redmine/
+
+--
+
+modified by Philipp Schüle to allow to 
+    - import categories / do not use the trackers as categories
+    - use severity column to determine the tracker (feature/bug)
+    - skip attachments because they might be  in the DB
