@@ -205,7 +205,7 @@ my $dbix_mantis = DBIx::Simple->connect(
     { RaiseError => 1 }
 );
 my $dbix_redmine = DBIx::Simple->connect( 
-    'DBI:mysql:database='. $opt{ redmine_db_name }. ';host='. $opt{ redmine_db_host },
+    'DBI:Pg:database='. $opt{ redmine_db_name }. ';host='. $opt{ redmine_db_host },
     $opt{ redmine_db_login }, $opt{ redmine_db_pass },
     { RaiseError => 1 }
 );
@@ -863,7 +863,7 @@ WHERE
 SQLNOTES
 
     # get admin id for file uploads
-    my ( $admin_id ) = $dbix_redmine->query( 'SELECT id FROM users WHERE login = "admin" LIMIT 1' )->list;
+    my ( $admin_id ) = $dbix_redmine->query( "SELECT id FROM users WHERE login = 'admin' LIMIT 1" )->list;
     unless ( $admin_id ) {
         ( $admin_id ) = $dbix_redmine->query( 'SELECT id FROM users LIMIT 1' )->list;
     }
@@ -1030,7 +1030,7 @@ SQLRELATIONS
             #print Dumper $ref;
             
             # there is some issue with multiline .. hmm.. stragen enough:
-            my $sql = 'INSERT INTO custom_fields ('. join( ', ', map { "`$_`" } sort keys %$ref ). ') VALUES ('. join( ', ', map { "?" } sort keys %$ref ). ')';
+            my $sql = 'INSERT INTO custom_fields ('. join( ', ', map { "\"$_\"" } sort keys %$ref ). ') VALUES ('. join( ', ', map { "?" } sort keys %$ref ). ')';
             my @sql_values = map { $ref->{ $_ } } sort keys %$ref;
             #print "$sql : ". join( ", ", @sql_values ). "\n"; 
             $dbix_redmine->query( $sql, @sql_values );
