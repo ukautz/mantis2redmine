@@ -70,6 +70,6 @@ Notes
 
 * In Redmine 2.3 I had to execute following SQLs in order to see the list of issues. All projects with ID > 4 were newly imported...
 
-update issues set lft=1 where project_id >4 and lft is null;                                                                             │·············
+update issues set lft=1 where project_id >4 and lft is null;
 update issues set rgt=2 where project_id >4 and rgt is null;
 
