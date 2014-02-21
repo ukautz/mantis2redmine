@@ -881,7 +881,7 @@ SQLNOTES
             # insert
             $dbix_redmine->insert( issues => my $ref = {
             	# severity 10 => feature / alle anderen -> bug
-                tracker_id       => ($issue_ref->{ severity } == 10) ? $trackerIdFeature : $trackerIdBug,
+                tracker_id       => $issue_ref->{ category_id } > 0 ? $map_ref->{ trackers }->{ $issue_ref->{ category_id } } : $trackerIdFeature,
                 project_id       => $map_ref->{ projects }->{ $issue_ref->{ project_id } },
                 category_id      => $map_ref->{ projects }->{ $issue_ref->{ category_id } },
                 subject          => $issue_ref->{ subject },
