@@ -890,6 +890,7 @@ SQLNOTES
                 assigned_to_id   => $map_ref->{ users }->{ $issue_ref->{ handler_id } },
                 priority_id      => $map_ref->{ priorities }->{ $issue_ref->{ priority } }->{ id },
                 author_id        => $map_ref->{ users }->{ $issue_ref->{ reporter_id } },
+                position         => 0,
                 created_on       => $issue_ref->{ created_on },
                 updated_on       => $issue_ref->{ updated_on },
                 start_date       => $issue_ref->{ start_date },
