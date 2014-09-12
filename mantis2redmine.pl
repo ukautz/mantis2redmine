@@ -199,7 +199,7 @@ unless ( $DRY || read_in( "Are you sure you? Do you have a backup of your import
 my $dbix_mantis = DBIx::Simple->connect(
     'DBI:mysql:database='. $opt{ mantis_db_name }. ';host='. $opt{ mantis_db_host },
     $opt{ mantis_db_login }, $opt{ mantis_db_pass },
-    { RaiseError => 1 }
+    { RaiseError => 1, mysql_enable_utf8 => 1},
 );
 my $dbix_redmine = DBIx::Simple->connect(
     'DBI:mysql:database='. $opt{ redmine_db_name }. ';host='. $opt{ redmine_db_host },
