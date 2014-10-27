@@ -37,7 +37,7 @@ Example:
     mantis_db_name = mantis
     mantis_db_login = mantis_user
     mantis_db_pass = mantis_password
-    
+
     redmine_db_host = localhost
     redmine_db_name = redmine
     redmine_db_login = redmine_user
