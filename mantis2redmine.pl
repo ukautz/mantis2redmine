@@ -36,7 +36,7 @@ This would require the following packages on a debian system
 
 =item * It says "Load from file" ..
 
-You already ran this script once (eg in dry-run-mode). It will create store-<name>.map files within the current directory to save your answers. If you want to answer one (or all) of the mappings again simply remove the corresponding store-file (name should be self-explanatory.
+You already ran this script once (eg in dry-run-mode). It will create store-<name>.map files within the current directory to save your answers. If you want to answer one (or all) of the mappings again simply remove the corresponding store-file (name should be self-explanatory).
 
 =back
 
