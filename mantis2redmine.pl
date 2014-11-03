@@ -482,7 +482,7 @@ User interactive.
 sub import_trackers {
     my %mantis = map {
         ( $_->{ id } => $_ );
-    } $dbix_mantis->query( 'SELECT id, name, project_id FROM mantis_category_table' )->hashes;
+    } $dbix_mantis->query( 'SELECT id, category as name, project_id FROM mantis_project_category_table' )->hashes;
 
     my %redmine = map {
         ( $_->{ id } => $_ );
@@ -517,7 +517,7 @@ User interactive.
 sub import_categories {
     my %mantis = map {
         ( $_->{ id } => $_ );
-    } $dbix_mantis->query( 'SELECT id, name, project_id FROM mantis_category_table' )->hashes;
+    } $dbix_mantis->query( 'SELECT id, category as name, project_id FROM mantis_project_category_table' )->hashes;
 
     my %redmine = map {
         ( $_->{ id } => $_ );
@@ -828,7 +828,7 @@ SELECT
     b.status,
     b.target_version,
     b.severity,
-    b.category_id,
+    c.id as `category_id`,
     b.summary AS `subject`,
     DATE_FORMAT( FROM_UNIXTIME( b.date_submitted ), '%Y-%m-%d %T' ) AS `created_on`,
     DATE_FORMAT( FROM_UNIXTIME( b.date_submitted ), '%Y-%m-%d' ) AS `start_date`,
@@ -836,6 +836,7 @@ SELECT
     CONCAT_WS( "\n\n", tt.description, tt.steps_to_reproduce, tt.additional_information ) AS `description`
 FROM mantis_bug_table b
 LEFT JOIN mantis_bug_text_table tt ON ( tt.id = b.bug_text_id )
+LEFT JOIN mantis_project_category_table c ON ( c.category = b.category AND c.project_id = b.project_id )
 SQL
 
     my $notes_sql = <<SQLNOTES;
@@ -886,7 +887,7 @@ SQLNOTES
             	# severity 10 => feature / alle anderen -> bug
                 tracker_id       => ($issue_ref->{ severity } == 10) ? $trackerIdFeature : $trackerIdBug,
                 project_id       => $map_ref->{ projects }->{ $issue_ref->{ project_id } },
-                category_id      => $map_ref->{ projects }->{ $issue_ref->{ category_id } },
+                category_id      => $map_ref->{ categories }->{ $issue_ref->{ category_id } },
                 subject          => encode( "UTF-8", $issue_ref->{ subject } ),
                 description      => encode( "UTF-8", $issue_ref->{ description } ),
                 status_id        => $map_ref->{ stati }->{ $issue_ref->{ status } }->{ id },
