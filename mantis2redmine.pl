@@ -678,6 +678,26 @@ sub perform_import {
                     rgt         => $max+1
                 } );
                 ( $map_ref->{ projects }->{ $old_id } ) = $dbix_redmine->query( 'SELECT MAX(id) FROM projects' )->list;
+
+                $dbix_redmine->insert( enabled_modules => {
+                    project_id => $map_ref->{ projects }->{ $old_id },
+                    name       => 'issue_tracking'
+                } );
+
+                $dbix_redmine->insert( enabled_modules => {
+                    project_id => $map_ref->{ projects }->{ $old_id },
+                    name       => 'files'
+                } );
+
+                $dbix_redmine->insert( enabled_modules => {
+                    project_id => $map_ref->{ projects }->{ $old_id },
+                    name       => 'calendar'
+                } );
+
+                $dbix_redmine->insert( enabled_modules => {
+                    project_id => $map_ref->{ projects }->{ $old_id },
+                    name       => 'gantt'
+                } );
             }
 
             $report{ projects_created } ++;
