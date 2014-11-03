@@ -992,7 +992,7 @@ SQLNOTES
         # set root_id to id for redmine to work properly
         $dbix_redmine->query( 'UPDATE issues SET root_id=id WHERE root_id IS NULL;' );
     }
-    
+
     print "OK\n";
 
     print "Import Relations\n";
