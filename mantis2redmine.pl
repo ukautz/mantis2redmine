@@ -850,9 +850,9 @@ SELECT
     b.severity,
     c.id as `category_id`,
     b.summary AS `subject`,
-    DATE_FORMAT( FROM_UNIXTIME( b.date_submitted ), '%Y-%m-%d %T' ) AS `created_on`,
-    DATE_FORMAT( FROM_UNIXTIME( b.date_submitted ), '%Y-%m-%d' ) AS `start_date`,
-    DATE_FORMAT( FROM_UNIXTIME( b.last_updated ), '%Y-%m-%d %T' ) AS `updated_on`,
+    b.date_submitted AS `created_on`,
+    b.date_submitted AS `start_date`,
+    b.last_updated AS `updated_on`,
     CONCAT_WS( "\n\n", tt.description, tt.steps_to_reproduce, tt.additional_information ) AS `description`
 FROM mantis_bug_table b
 LEFT JOIN mantis_bug_text_table tt ON ( tt.id = b.bug_text_id )
@@ -862,7 +862,7 @@ SQL
     my $notes_sql = <<SQLNOTES;
 SELECT
     b.reporter_id,
-    DATE_FORMAT( FROM_UNIXTIME( b.date_submitted ), '%Y-%m-%d %T' ) AS `created_on`,
+    b.date_submitted  AS `created_on`,
     tt.note
 FROM mantis_bugnote_table b
 LEFT JOIN mantis_bugnote_text_table tt ON ( tt.id = b.bugnote_text_id )
@@ -875,7 +875,7 @@ SELECT
     b.diskfile,
     b.filename,
     b.file_type,
-    DATE_FORMAT( FROM_UNIXTIME( b.date_added ), '%Y-%m-%d %T' ) AS `created_on`,
+    b.date_added AS `created_on`,
     CONCAT_WS( "\n", b.title, b.description ) AS `description`,
     b.content
 FROM mantis_bug_file_table b
