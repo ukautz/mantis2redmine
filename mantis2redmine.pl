@@ -811,7 +811,7 @@ sub perform_import {
 
                 # get category probs
                 my $name       = delete $new_ref->{ name };
-                my $project_id = delete $new_ref->{ project_id };
+                my $project_id = $map_ref->{ projects }->{ delete $new_ref->{ project_id } };
 
                 unless ( $DRY ) {
 
