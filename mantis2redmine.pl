@@ -957,7 +957,6 @@ SQLNOTES
             my $attachments = $dbix_mantis->query( $attachments_sql, $issue_ref->{ id } );
             while ( my $attachment_ref = $attachments->hash ) {
                 # we have the attachments in the db -> exit
-                last;
                 print "+";
 
                 unless ( $DRY ) {
