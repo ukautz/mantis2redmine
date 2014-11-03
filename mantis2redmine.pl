@@ -913,7 +913,7 @@ SQLNOTES
                 status_id        => $map_ref->{ stati }->{ $issue_ref->{ status } }->{ id },
                 assigned_to_id   => $map_ref->{ users }->{ $issue_ref->{ handler_id } },
                 priority_id      => $map_ref->{ priorities }->{ $issue_ref->{ priority } }->{ id },
-                author_id        => $map_ref->{ users }->{ $issue_ref->{ reporter_id } },
+                author_id        => $map_ref->{ users }->{ $issue_ref->{ reporter_id } } || 2,
                 created_on       => $issue_ref->{ created_on },
                 updated_on       => $issue_ref->{ updated_on },
                 start_date       => $issue_ref->{ start_date },
@@ -942,7 +942,7 @@ SQLNOTES
                 $dbix_redmine->insert( journals => {
                     journalized_id   => $issue_id,
                     journalized_type => 'Issue',
-                    user_id          => $map_ref->{ users }->{ $note_ref->{ reporter_id } },
+                    user_id          => $map_ref->{ users }->{ $note_ref->{ reporter_id } } || 2,
                     notes            => encode( "UTF-8", $note_ref->{ note } ),
                     created_on       => $note_ref->{ created_on },
                 } );
