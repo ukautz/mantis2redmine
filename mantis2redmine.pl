@@ -961,7 +961,7 @@ SQLNOTES
                 unless ( $DRY ) {
 
                     # write file to disk
-                    my $filename = "$attachment_ref->{ diskfile }_$attachment_ref->{ filename }";
+                    my $filename = "$attachment_ref->{ diskfile }";
                     my $output = "$opt{ attachment_dir }/$filename";
                     open my $fh, '>', $output or die "Cannot open attachment file '$output' for write: $!";
                     binmode $fh;
