@@ -1,3 +1,5 @@
+> This repo is no longer maintained. Get in touch if you want to continue the project yourself.
+
 mantis2redmine
 ==============
 
