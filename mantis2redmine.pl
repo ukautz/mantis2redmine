@@ -893,6 +893,8 @@ SQLNOTES
                 created_on       => $issue_ref->{ created_on },
                 updated_on       => $issue_ref->{ updated_on },
                 start_date       => $issue_ref->{ start_date },
+                lft              => 1,
+                rgt              => 2,
                 fixed_version_id => $issue_ref->{ target_version } && defined $version_map{ $issue_ref->{ target_version } }
                     ? $version_map{ $issue_ref->{ target_version } }
                     : 0
@@ -961,6 +963,12 @@ SQLNOTES
         	# we have the attachments in the db -> exit
         }
     }
+
+    unless ( $DRY ) {
+        # set root_id to id for redmine to work properly
+        $dbix_redmine->query( 'UPDATE issues SET root_id=id WHERE root_id IS NULL;' );
+    }
+    
     print "OK\n";
     
     print "Import Relations\n";
