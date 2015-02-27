@@ -66,3 +66,12 @@ After the script finishes successfully check your Redmine installation. Probably
 The last step is to copy all exported attachment files (default in `./attachments/` folder) in your Redmine file directory (in a "normal" Redmine installation this would be `/files` in your Redmine base dir; if you installed via debian apt-get it is in `/var/lib/redmine/default/files`).
 
 Done.
+
+Notes
+-----
+
+* In Redmine 2.3 I had to execute following SQLs in order to see the list of issues. All projects with ID > 4 were newly imported...
+
+update issues set lft=1 where project_id >4 and lft is null;
+update issues set rgt=2 where project_id >4 and rgt is null;
+

@@ -87,6 +87,9 @@ use DBIx::Simple;
 use Data::Dumper;
 use YAML;
 
+use utf8;
+use Encode;
+
 use version 0.74; our $VERSION = qv(v0.3.1);
 
 # Unbuffered output
@@ -202,7 +205,7 @@ my $dbix_mantis = DBIx::Simple->connect(
     { RaiseError => 1, mysql_enable_utf8 => 1},
 );
 my $dbix_redmine = DBIx::Simple->connect( 
-    'DBI:mysql:database='. $opt{ redmine_db_name }. ';host='. $opt{ redmine_db_host },
+    'DBI:Pg:database='. $opt{ redmine_db_name }. ';host='. $opt{ redmine_db_host },
     $opt{ redmine_db_login }, $opt{ redmine_db_pass },
     { RaiseError => 1 }
 );
@@ -860,7 +863,7 @@ WHERE
 SQLNOTES
 
     # get admin id for file uploads
-    my ( $admin_id ) = $dbix_redmine->query( 'SELECT id FROM users WHERE login = "admin" LIMIT 1' )->list;
+    my ( $admin_id ) = $dbix_redmine->query( "SELECT id FROM users WHERE login = 'admin' LIMIT 1" )->list;
     unless ( $admin_id ) {
         ( $admin_id ) = $dbix_redmine->query( 'SELECT id FROM users LIMIT 1' )->list;
     }
@@ -881,15 +884,16 @@ SQLNOTES
             # insert
             $dbix_redmine->insert( issues => my $ref = {
             	# severity 10 => feature / alle anderen -> bug
-                tracker_id       => ($issue_ref->{ severity } == 10) ? $trackerIdFeature : $trackerIdBug,
+                tracker_id       => $issue_ref->{ category_id } > 0 ? $map_ref->{ trackers }->{ $issue_ref->{ category_id } } : $trackerIdFeature,
                 project_id       => $map_ref->{ projects }->{ $issue_ref->{ project_id } },
                 category_id      => $map_ref->{ projects }->{ $issue_ref->{ category_id } },
-                subject          => $issue_ref->{ subject },
-                description      => $issue_ref->{ description },
+                subject          => encode( "UTF-8", $issue_ref->{ subject } ),
+                description      => encode( "UTF-8", $issue_ref->{ description } ),
                 status_id        => $map_ref->{ stati }->{ $issue_ref->{ status } }->{ id },
                 assigned_to_id   => $map_ref->{ users }->{ $issue_ref->{ handler_id } },
                 priority_id      => $map_ref->{ priorities }->{ $issue_ref->{ priority } }->{ id },
                 author_id        => $map_ref->{ users }->{ $issue_ref->{ reporter_id } },
+                position         => 0,
                 created_on       => $issue_ref->{ created_on },
                 updated_on       => $issue_ref->{ updated_on },
                 start_date       => $issue_ref->{ start_date },
@@ -919,7 +923,7 @@ SQLNOTES
                     journalized_id   => $issue_id,
                     journalized_type => 'Issue',
                     user_id          => $map_ref->{ users }->{ $note_ref->{ reporter_id } },
-                    notes            => $note_ref->{ note },
+                    notes            => encode( "UTF-8", $note_ref->{ note } ),
                     created_on       => $note_ref->{ created_on },
                 } );
             }
@@ -1034,7 +1038,7 @@ SQLRELATIONS
             #print Dumper $ref;
             
             # there is some issue with multiline .. hmm.. stragen enough:
-            my $sql = 'INSERT INTO custom_fields ('. join( ', ', map { "`$_`" } sort keys %$ref ). ') VALUES ('. join( ', ', map { "?" } sort keys %$ref ). ')';
+            my $sql = 'INSERT INTO custom_fields ('. join( ', ', map { "\"$_\"" } sort keys %$ref ). ') VALUES ('. join( ', ', map { "?" } sort keys %$ref ). ')';
             my @sql_values = map { $ref->{ $_ } } sort keys %$ref;
             #print "$sql : ". join( ", ", @sql_values ). "\n"; 
             $dbix_redmine->query( $sql, @sql_values );
@@ -1067,7 +1071,7 @@ SQLRELATIONS
                     customized_type => 'Issue',
                     customized_id   => $issue_map{ $field_value_ref->{ bug_id } },
                     custom_field_id => $custom_field_id,
-                    value           => $field_value_ref->{ value }
+                    value           => encode( "UTF-8", $field_value_ref->{ value } )
                 } );
             }
         }
