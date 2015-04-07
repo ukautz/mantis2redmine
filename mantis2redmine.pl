@@ -482,7 +482,7 @@ User interactive.
 sub import_trackers {
     my %mantis = map {
         ( $_->{ id } => $_ );
-    } $dbix_mantis->query( 'SELECT id, category as name, project_id FROM mantis_project_category_table' )->hashes;
+    } $dbix_mantis->query( 'SELECT id, category as name, project_id FROM mantis__category_table' )->hashes;
 
     my %redmine = map {
         ( $_->{ id } => $_ );
@@ -517,7 +517,7 @@ User interactive.
 sub import_categories {
     my %mantis = map {
         ( $_->{ id } => $_ );
-    } $dbix_mantis->query( 'SELECT id, category as name, project_id FROM mantis_project_category_table' )->hashes;
+    } $dbix_mantis->query( 'SELECT id, name, project_id FROM mantis_category_table' )->hashes;
 
     my %redmine = map {
         ( $_->{ id } => $_ );
@@ -816,11 +816,11 @@ sub perform_import {
                 unless ( $DRY ) {
 
                     # create category
-                    $dbix_redmine->insert( issue_categories => {
-                        name          => $name,
-                        project_id    => $project_id
-                    } );
-                    ( $map_ref->{ categories }->{ $old_id } ) = $dbix_redmine->query( 'SELECT MAX(id) FROM issue_categories' )->list;
+                    #$dbix_redmine->insert( issue_categories => {
+                    #    name          => $name,
+                    #    project_id    => $project_id
+                    #} );
+                    #( $map_ref->{ categories }->{ $old_id } ) = $dbix_redmine->query( 'SELECT MAX(id) FROM issue_categories' )->list;
                 }
 
                 $report{ categories_created } ++;
@@ -856,7 +856,7 @@ SELECT
     CONCAT_WS( "\n\n", tt.description, tt.steps_to_reproduce, tt.additional_information ) AS `description`
 FROM mantis_bug_table b
 LEFT JOIN mantis_bug_text_table tt ON ( tt.id = b.bug_text_id )
-LEFT JOIN mantis_project_category_table c ON ( c.category = b.category AND c.project_id = b.project_id )
+LEFT JOIN mantis_category_table c ON ( c.name = b.category_id AND c.project_id = b.project_id )
 SQL
 
     my $notes_sql = <<SQLNOTES;
