@@ -204,7 +204,7 @@ my $dbix_mantis = DBIx::Simple->connect(
 my $dbix_redmine = DBIx::Simple->connect(
     'DBI:mysql:database='. $opt{ redmine_db_name }. ';host='. $opt{ redmine_db_host },
     $opt{ redmine_db_login }, $opt{ redmine_db_pass },
-    { RaiseError => 1 }
+    { RaiseError => 1, mysql_enable_utf8 => 1}
 );
 
 
