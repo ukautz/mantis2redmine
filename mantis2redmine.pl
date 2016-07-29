@@ -514,7 +514,7 @@ User interactive.
 sub import_categories {
     my %mantis = map {
         ( $_->{ id } => $_ );
-    } $dbix_mantis->query( 'SELECT id, name, project_id FROM mantis_category_table' )->hashes;
+    } $dbix_mantis->query( 'SELECT id, name, project_id, user_id as assigned_to_id FROM mantis_category_table' )->hashes;
 
     my %redmine = map {
         ( $_->{ id } => $_ );
@@ -809,6 +809,7 @@ sub perform_import {
 
                 # get category probs
                 my $name       = delete $new_ref->{ name };
+                my $user_id    = delete $new_ref->{ assigned_to_id };
                 # link category to project(s)
                 my $project_id = $map_ref->{ projects }->{ delete $new_ref->{ project_id } } ;
                 my @insert = $project_id == 0 ? @project_ids : $project_id ;
@@ -818,8 +819,9 @@ sub perform_import {
                     foreach my $insert( @insert ) {
                     # create category
                         $dbix_redmine->insert( issue_categories => {
-                            name          => $name,
-                            project_id    => $insert
+                            name           => $name,
+                            assigned_to_id => $map_ref->{ users }->{ $user_id },
+                            project_id     => $insert
                         } );
                     }
                     ( $map_ref->{ categories }->{ $old_id } ) = $dbix_redmine->query( 'SELECT MAX(id) FROM issue_categories' )->list;
