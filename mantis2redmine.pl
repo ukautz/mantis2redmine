@@ -479,7 +479,7 @@ User interactive.
 sub import_trackers {
     my %mantis = map {
         ( $_->{ id } => $_ );
-    } $dbix_mantis->query( 'SELECT id, category as name, project_id FROM mantis__category_table' )->hashes;
+    } $dbix_mantis->query( 'SELECT id, category as name, project_id FROM mantis_category_table' )->hashes;
 
     my %redmine = map {
         ( $_->{ id } => $_ );
@@ -798,6 +798,7 @@ sub perform_import {
     # use Categories -> Categories (default)
     else {
         print "Import Categories\n";
+        my @project_ids = $dbix_redmine->query( 'SELECT id FROM projects' )->flat;
         my @category_ids = $dbix_redmine->query( 'SELECT id FROM issue_categories' )->flat;
         while( my ( $old_id, $new_ref ) = each %{ $map_ref->{ categories } } ) {
             print ".";
@@ -808,16 +809,20 @@ sub perform_import {
 
                 # get category probs
                 my $name       = delete $new_ref->{ name };
-                my $project_id = $map_ref->{ projects }->{ delete $new_ref->{ project_id } };
+                # link category to project(s)
+                my $project_id = $map_ref->{ projects }->{ delete $new_ref->{ project_id } } ;
+                my @insert = $project_id == 0 ? @project_ids : $project_id ;
 
                 unless ( $DRY ) {
 
+                    foreach my $insert( @insert ) {
                     # create category
-                    #$dbix_redmine->insert( issue_categories => {
-                    #    name          => $name,
-                    #    project_id    => $project_id
-                    #} );
-                    #( $map_ref->{ categories }->{ $old_id } ) = $dbix_redmine->query( 'SELECT MAX(id) FROM issue_categories' )->list;
+                        $dbix_redmine->insert( issue_categories => {
+                            name          => $name,
+                            project_id    => $insert
+                        } );
+                    }
+                    ( $map_ref->{ categories }->{ $old_id } ) = $dbix_redmine->query( 'SELECT MAX(id) FROM issue_categories' )->list;
                 }
 
                 $report{ categories_created } ++;
