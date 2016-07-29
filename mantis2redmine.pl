@@ -810,18 +810,17 @@ sub perform_import {
                 # get category probs
                 my $name       = delete $new_ref->{ name };
                 my $user_id    = delete $new_ref->{ assigned_to_id };
-                # link category to project(s)
+                # link category to project
                 my $project_id = $map_ref->{ projects }->{ delete $new_ref->{ project_id } } ;
-                my @insert = $project_id == 0 ? @project_ids : $project_id ;
 
                 unless ( $DRY ) {
 
-                    foreach my $insert( @insert ) {
-                    # create category
+                    unless ( $project_id == 0 ) {
+                        # create category
                         $dbix_redmine->insert( issue_categories => {
                             name           => $name,
                             assigned_to_id => $map_ref->{ users }->{ $user_id },
-                            project_id     => $insert
+                            project_id     => $project_id
                         } );
                     }
                     ( $map_ref->{ categories }->{ $old_id } ) = $dbix_redmine->query( 'SELECT MAX(id) FROM issue_categories' )->list;
