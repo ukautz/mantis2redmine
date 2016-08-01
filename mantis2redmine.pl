@@ -433,12 +433,10 @@ User interactive.
 
 sub import_versions {
 
-    #my $sql_version_table = 'SELECT id, version, description, project_id, DATE_FORMAT( date, \'%Y-%m-%d\' ) as date, released FROM mantis_project_version_table';
-    my $sql_version_table = 'SELECT id, version, description, project_id, released FROM mantis_project_version_table';
     my %mantis = map {
         $_->{ name } = substr( delete $_->{ version }, 0, 30 );
         ( $_->{ id } => $_ );
-    } $dbix_mantis->query( $sql_version_table )->hashes;
+    } $dbix_mantis->query( 'SELECT id, version, description, project_id, released, FROM_UNIXTIME( date_order, \'%Y-%m-%d\' ) as effective_date FROM mantis_project_version_table' )->hashes;
 
     my %redmine = map {
         ( $_->{ id } => $_ );
@@ -724,7 +722,7 @@ sub perform_import {
                     description     => $new_ref->{ description },
                     project_id      => $project_id,
                     status          => $released,
-                    effective_date  => $new_ref->{ date }
+                    effective_date  => $new_ref->{ effective_date }
                 } );
                 ( $map_ref->{ versions }->{ $old_id } ) = $dbix_redmine->query( 'SELECT MAX(id) FROM versions' )->list;
                 $version_map{ $new_ref->{ name } } = $map_ref->{ versions }->{ $old_id };
