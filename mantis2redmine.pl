@@ -847,6 +847,7 @@ SELECT
     b.priority,
     b.status,
     b.target_version,
+    b.fixed_in_version,
     b.severity,
     c.id as `category_id`,
     b.summary AS `subject`,
@@ -921,7 +922,7 @@ SQLNOTES
                 rgt              => 2,
                 fixed_version_id => $issue_ref->{ target_version } && defined $version_map{ $issue_ref->{ target_version } }
                     ? $version_map{ $issue_ref->{ target_version } }
-                    : 0
+                    : defined $version_map{ $issue_ref->{ fixed_in_version } } ? $version_map{ $issue_ref->{ fixed_in_version } } : 0
             } );
 
             # get id of the issue
