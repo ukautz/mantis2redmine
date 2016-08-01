@@ -272,7 +272,7 @@ sub import_stati {
         40 => [ "confirmed", $redmine_stati{ 1 } ], # confirmed
         50 => [ "assigned", $redmine_stati{ 2 } || $default_ref ], # assigned
         80 => [ "resolved", $redmine_stati{ 3 } || $default_ref ], # resolved
-        90 => [ "closed", $redmine_stati{ 3 } || $default_ref ]  # closed
+        90 => [ "closed", $redmine_stati{ 5 } || $default_ref ]  # closed
     );
 
     return create_map( 'Status', \%mantis_stati, \%redmine_stati, $default_ref, 'position' );
