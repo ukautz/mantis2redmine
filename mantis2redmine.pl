@@ -387,7 +387,7 @@ sub import_projects {
     my %mantis = map {
         $_->{ name } => $_->{ name };
         ( $_->{ id } => $_ );
-    } $dbix_mantis->query( 'SELECT id, name FROM mantis_project_table' )->hashes;
+    } $dbix_mantis->query( 'SELECT id, name, description FROM mantis_project_table' )->hashes;
     my ( $first_mantis_id ) = sort keys %mantis;
     die "Did not find any mantis projects\n"
         unless $first_mantis_id;
@@ -665,7 +665,6 @@ sub perform_import {
 
                 $dbix_redmine->insert( projects => {
                     %$new_ref, # name
-                    description => 'Imported from Mantis',
                     is_public   => 0,
                     created_on  => \'NOW()',
                     updated_on  => \'NOW()',
