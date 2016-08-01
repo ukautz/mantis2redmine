@@ -705,6 +705,48 @@ sub perform_import {
     }
     print "OK\n";
 
+    print "Import Members\n";
+    
+   my $mantis_members = $dbix_mantis->query( <<SQLMEMBERS );
+SELECT
+    project_id,
+    user_id,
+    access_level
+FROM
+    mantis_project_user_list_table
+SQLMEMBERS
+
+    while( my $member_ref = $mantis_members->hash ) {
+        print ".";
+        my $members_id = $dbix_redmine->query( 'SELECT MAX(id) FROM members' )->list;
+        $members_id++;
+        my $member_roles_id = $dbix_redmine->query( 'SELECT MAX(id) FROM member_roles' )->list;
+        $member_roles_id++;
+
+        #print "member id: $members_id\n";
+        #print "project_id: $map_ref->{ projects }->{ $member_ref->{ project_id } }\n";
+        #print "user_id: $map_ref->{ users }->{ $member_ref->{ user_id } }\n";
+        #print "role id: $member_roles_id\n";
+        #print "role: $map_ref->{ roles }->{ $member_ref->{ access_level } }->{ id }\n";
+
+        unless ( $DRY ) {
+             $dbix_redmine->insert( members => {
+                 id         => $members_id,
+                 project_id => $map_ref->{ projects }->{ $member_ref->{ project_id } },
+                 user_id    => $map_ref->{ users }->{ $member_ref->{ user_id } }
+             } );
+
+             $dbix_redmine->insert( member_roles => {
+                id        => $member_roles_id,
+                member_id => $members_id,
+                role_id   => $map_ref->{ roles }->{ $member_ref->{ access_level } }->{ id }
+             } );
+        }
+        $report{ members_migrated } ++;
+    }
+    print "OK\n";
+
+
     print "Import Versions\n";
     my %version_map = ();
     while( my ( $old_id, $new_ref ) = each %{ $map_ref->{ versions } } ) {
@@ -1106,6 +1148,7 @@ SQLRELATIONS
     printf "%-40s : %5d / %5d\n", 'Versions (migrated/created)', $report{ versions_migrated } || 0, $report{ versions_created } || 0;
     printf "%-40s : %5d / %5d\n", 'Trackers (migrated/created)', $report{ trackers_migrated } || 0, $report{ trackers_created } || 0;
     printf "%-40s : %5d / %5d\n", 'Categories (migrated/created)', $report{ categories_migrated } || 0, $report{ categories_created } || 0;
+    printf "%-40s : %5d\n", 'Members imported', $report{ members_migrated } || 0;
     printf "%-40s : %5d\n", 'Issues imported', $report{ issues_created } || 0;
     printf "%-40s : %5d\n", 'Journals imported', $report{ journals_created } || 0;
     printf "%-40s : %5d\n", 'Attachments imported', $report{ attachments_created } || 0;
