@@ -385,7 +385,7 @@ Non interactive.
 
 sub import_projects {
     my %mantis = map {
-        $_->{ name } = substr( $_->{ name }, 0, 30 );
+        $_->{ name } => $_->{ name };
         ( $_->{ id } => $_ );
     } $dbix_mantis->query( 'SELECT id, name FROM mantis_project_table' )->hashes;
     my ( $first_mantis_id ) = sort keys %mantis;
