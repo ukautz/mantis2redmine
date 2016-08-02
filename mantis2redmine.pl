@@ -367,10 +367,10 @@ Non interactive.
 sub import_relations {
     return {
         1 => 'relates',    # related to
-        2 => 'relates',    # parent of
-        3 => 'relates',    # child of
+        2 => 'blocked',    # parent of
+        3 => 'blocks',     # child of
         0 => 'duplicates', # duplicate of
-        4 => 'duplicates'  # has duplicate
+        4 => 'duplicated'  # has duplicate
     };
 }
 
