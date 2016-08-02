@@ -935,17 +935,12 @@ SELECT
     b.file_type,
     FROM_UNIXTIME( b.date_added, '%Y-%m-%d %T' ) AS `created_on`,
     CONCAT_WS( "\n", b.title, b.description ) AS `description`,
-    b.content
+    b.content,
+    b.user_id
 FROM mantis_bug_file_table b
 WHERE
     b.bug_id = ?
 SQLNOTES
-
-    # get admin id for file uploads
-    my ( $admin_id ) = $dbix_redmine->query( 'SELECT id FROM users WHERE login = "admin" LIMIT 1' )->list;
-    unless ( $admin_id ) {
-        ( $admin_id ) = $dbix_redmine->query( 'SELECT id FROM users LIMIT 1' )->list;
-    }
 
     my %issue_map = ();
     while ( my $issue_ref = $issues->hash ) {
@@ -1066,7 +1061,7 @@ SQLNOTES
                         filesize       => -s $output,
                         content_type   => $attachment_ref->{ file_type },
                         created_on     => $attachment_ref->{ created_on },
-                        author_id      => $admin_id
+                        author_id      => $map_ref->{ users }->{ $attachment_ref->{ user_id } } || 2,
                     } );
                 }
                 $report{ attachments_created } ++;
