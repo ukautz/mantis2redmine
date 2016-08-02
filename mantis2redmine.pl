@@ -933,7 +933,7 @@ SELECT
     b.diskfile,
     b.filename,
     b.file_type,
-    DATE_FORMAT( FROM_UNIXTIME( b.date_added ), '%Y-%m-%d %T' ) AS `created_on`,
+    FROM_UNIXTIME( b.date_added, '%Y-%m-%d %T' ) AS `created_on`,
     CONCAT_WS( "\n", b.title, b.description ) AS `description`,
     b.content
 FROM mantis_bug_file_table b
