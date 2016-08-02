@@ -645,6 +645,7 @@ sub perform_import {
 
     print "Import Projects\n";
     my $count = 1;
+    my @mantis_admins = $dbix_mantis->query( 'SELECT id, access_level FROM mantis_user_table WHERE access_level = 90' )->hashes;
     while( my ( $old_id, $new_ref ) = each %{ $map_ref->{ projects } } ) {
         print ".";
 
@@ -692,6 +693,26 @@ sub perform_import {
                     project_id => $map_ref->{ projects }->{ $old_id },
                     name       => 'gantt'
                 } );
+
+                # Add admins as manager to all projects
+                foreach my $admin_ref ( @mantis_admins ) {
+                    my $members_id = $dbix_redmine->query( 'SELECT MAX(id) FROM members' )->list;
+                    $members_id++;
+                    my $member_roles_id = $dbix_redmine->query( 'SELECT MAX(id) FROM member_roles' )->list;
+                    $member_roles_id++;
+    
+                    $dbix_redmine->insert( members => {
+                        id         => $members_id,
+                        project_id => $map_ref->{ projects }->{ $old_id },
+                        user_id    => $map_ref->{ users }->{ $admin_ref->{ id } }
+                    } );
+        
+                    $dbix_redmine->insert( member_roles => {
+                        id        => $member_roles_id,
+                        member_id => $members_id,
+                        role_id   => $map_ref->{ roles }->{ $admin_ref->{ access_level } }->{ id }
+                    } );
+                }
             }
 
             $report{ projects_created } ++;
