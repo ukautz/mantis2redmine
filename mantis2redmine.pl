@@ -696,20 +696,13 @@ sub perform_import {
 
                 # Add admins as manager to all projects
                 foreach my $admin_ref ( @mantis_admins ) {
-                    my $members_id = $dbix_redmine->query( 'SELECT MAX(id) FROM members' )->list;
-                    $members_id++;
-                    my $member_roles_id = $dbix_redmine->query( 'SELECT MAX(id) FROM member_roles' )->list;
-                    $member_roles_id++;
-    
                     $dbix_redmine->insert( members => {
-                        id         => $members_id,
                         project_id => $map_ref->{ projects }->{ $old_id },
                         user_id    => $map_ref->{ users }->{ $admin_ref->{ id } }
                     } );
-        
+                    my $member_id = $dbix_redmine->last_insert_id(undef, undef, undef, undef);
                     $dbix_redmine->insert( member_roles => {
-                        id        => $member_roles_id,
-                        member_id => $members_id,
+                        member_id => $member_id,
                         role_id   => $map_ref->{ roles }->{ $admin_ref->{ access_level } }->{ id }
                     } );
                 }
@@ -739,27 +732,15 @@ SQLMEMBERS
 
     while( my $member_ref = $mantis_members->hash ) {
         print ".";
-        my $members_id = $dbix_redmine->query( 'SELECT MAX(id) FROM members' )->list;
-        $members_id++;
-        my $member_roles_id = $dbix_redmine->query( 'SELECT MAX(id) FROM member_roles' )->list;
-        $member_roles_id++;
-
-        #print "member id: $members_id\n";
-        #print "project_id: $map_ref->{ projects }->{ $member_ref->{ project_id } }\n";
-        #print "user_id: $map_ref->{ users }->{ $member_ref->{ user_id } }\n";
-        #print "role id: $member_roles_id\n";
-        #print "role: $map_ref->{ roles }->{ $member_ref->{ access_level } }->{ id }\n";
 
         unless ( $DRY ) {
              $dbix_redmine->insert( members => {
-                 id         => $members_id,
                  project_id => $map_ref->{ projects }->{ $member_ref->{ project_id } },
                  user_id    => $map_ref->{ users }->{ $member_ref->{ user_id } }
              } );
-
+             my $member_id = $dbix_redmine->last_insert_id(undef, undef, undef, undef);
              $dbix_redmine->insert( member_roles => {
-                id        => $member_roles_id,
-                member_id => $members_id,
+                member_id => $member_id,
                 role_id   => $map_ref->{ roles }->{ $member_ref->{ access_level } }->{ id }
              } );
         }
