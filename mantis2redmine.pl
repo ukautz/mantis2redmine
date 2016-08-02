@@ -915,6 +915,19 @@ WHERE
     b.bug_id = ?
 SQLNOTES
 
+    my $history_sql = <<SQLNOTES;
+SELECT
+    b.user_id,
+    b.field_name,
+    b.old_value,
+    b.new_value,
+    b.type,
+    FROM_UNIXTIME( b.date_modified, '%Y-%m-%d %T' ) AS `created_on`
+FROM mantis_bug_history_table b
+WHERE
+    b.bug_id = ?
+SQLNOTES
+
     my $attachments_sql = <<SQLNOTES;
 SELECT
     b.diskfile,
@@ -994,6 +1007,37 @@ SQLNOTES
             }
 
             $report{ journals_created } ++;
+        }
+
+        # import issue history
+        my @mantis_bug_histories = $dbix_mantis->query( $history_sql, $issue_ref->{ id } )->hashes;
+
+        foreach my $history_ref ( @mantis_bug_histories ) {
+            # currently only status changes are imported
+            if ( $history_ref->{ field_name } eq 'status' ) {
+                print "-";
+
+                unless ( $DRY ) {
+
+                    # insert
+                    $dbix_redmine->insert( journals => {
+                        journalized_id   => $issue_id,
+                        journalized_type => 'Issue',
+                        user_id          => $map_ref->{ users }->{ $history_ref->{ user_id } } || 2,
+                        created_on       => $history_ref->{ created_on },
+                    } );
+                    my $journal_id = $dbix_redmine->last_insert_id(undef, undef, undef, undef);
+                    $dbix_redmine->insert( journal_details => {
+                        journal_id   => $journal_id,
+                        property     => 'attr',
+                        prop_key     => 'status_id',
+                        old_value    => $map_ref->{ stati }->{ $history_ref->{ old_value } }->{ id },
+                        value        => $map_ref->{ stati }->{ $history_ref->{ new_value } }->{ id },
+                    } );
+                }
+
+                $report{ journals_created } ++;
+            }
         }
 
         # insert attachments
