@@ -1122,6 +1122,7 @@ SQLNOTES
                         disk_filename  => $filename,
                         filesize       => -s $output,
                         content_type   => $attachment_ref->{ file_type },
+                        description    => $attachment_ref->{ description },
                         created_on     => $attachment_ref->{ created_on },
                         author_id      => $map_ref->{ users }->{ $attachment_ref->{ user_id } } || 2,
                     } );
