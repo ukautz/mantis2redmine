@@ -694,6 +694,11 @@ sub perform_import {
                     name       => 'gantt'
                 } );
 
+                $dbix_redmine->insert( enabled_modules => {
+                    project_id => $map_ref->{ projects }->{ $old_id },
+                    name       => 'documents'
+                } );
+
                 # Add admins as manager to all projects
                 foreach my $admin_ref ( @mantis_admins ) {
                     $dbix_redmine->insert( members => {
@@ -706,6 +711,63 @@ sub perform_import {
                         role_id   => $map_ref->{ roles }->{ $admin_ref->{ access_level } }->{ id }
                     } );
                 }
+                # insert documents
+                if (! $opt{ attachments_in_db } ) {
+                my $documents_sql = <<SQLQUERY;
+SELECT
+    b.diskfile,
+    b.filename,
+    b.file_type,
+    FROM_UNIXTIME( b.date_added, '%Y-%m-%d %T' ) AS `created_on`,
+    b.title,
+    b.description,
+    b.content,
+    b.user_id
+FROM mantis_project_file_table b
+WHERE
+    b.project_id = ?
+SQLQUERY
+
+                    my $documents = $dbix_mantis->query( $documents_sql, $old_id );
+                    while ( my $documents_ref = $documents->hash ) {
+                        print "+";
+        
+                        unless ( $DRY ) {
+        
+                            # write file to disk
+                            my $filename = "$documents_ref->{ diskfile }";
+                            my $output = "$opt{ attachment_dir }/$filename";
+                            open my $fh, '>', $output or die "Cannot open attachment file '$output' for write: $!";
+                            binmode $fh;
+                            print $fh delete $documents_ref->{ content };
+                            close $fh;
+        
+                            # insert
+                            $dbix_redmine->insert( documents => {
+                                project_id     => $map_ref->{ projects }->{ $old_id },
+                                category_id    => 7, # we only use tech-docs - user-doc would be 6
+                                title          => $documents_ref->{ title },
+                                description    => $documents_ref->{ description },
+                                created_on     => $documents_ref->{ created_on },
+                            } );
+                            my $container_id = $dbix_redmine->last_insert_id(undef, undef, undef, undef);
+                            $dbix_redmine->insert( attachments => {
+                                container_id   => $container_id,
+                                container_type => 'Document',
+                                filename       => $documents_ref->{ filename },
+                                disk_filename  => $filename,
+                                filesize       => -s $output,
+                                content_type   => $documents_ref->{ file_type },
+                                author_id      => $map_ref->{ users }->{ $documents_ref->{ user_id } } || 2,
+                                created_on     => $documents_ref->{ created_on },
+                                description    => $documents_ref->{ title },
+                            } );
+                        }
+                    }
+                } else {
+                	# we have the attachments in the db -> exit
+                }
+
             }
 
             $report{ projects_created } ++;
