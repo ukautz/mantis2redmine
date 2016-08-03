@@ -779,6 +779,17 @@ SQLQUERY
             $report{ projects_migrated } ++;
         }
     }
+
+    # Add parents (has to be done after all projects have been imported)
+    my @child_refs = $dbix_mantis->query( 'SELECT child_id,parent_id FROM mantis_project_hierarchy_table' )->hashes;
+    foreach my $child_ref ( @child_refs ) {
+        my %parent_id = ( parent_id => $map_ref->{ projects }->{ $child_ref->{ parent_id } } );
+        my %child_id = ( id => $map_ref->{ projects }->{ $child_ref->{ child_id } } );
+        $dbix_redmine->update( 'projects',
+            \%parent_id,
+            \%child_id
+        );
+    }
     print "OK\n";
 
     print "Import Members\n";
@@ -1265,6 +1276,7 @@ SQLRELATIONS
     else {
         print "** Import completed, have fun! **\n";
         print "You should copy now all extracted files from '$opt{ attachment_dir }/' to your attachment directory of redmine (usually '/files' in your redmine install dir)\n";
+        print "You have to REBUILD THE PROJECT TREE\nby running the 2 following commands from the rails console (`ruby script/rails c production`):\n    Project.update_all :lft => nil, :rgt => nil\n    Project.rebuild!(false)\n"
     }
 
 }
