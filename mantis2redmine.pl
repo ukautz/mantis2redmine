@@ -1110,6 +1110,15 @@ SQLNOTES
                         old_value    => $map_ref->{ stati }->{ $history_ref->{ old_value } }->{ id },
                         value        => $map_ref->{ stati }->{ $history_ref->{ new_value } }->{ id },
                     } );
+                    if ( $history_ref->{ new_value } eq 90 ) {
+                        my %closed_on = ( closed_on =>  $history_ref->{ created_on } );
+                        my %where_issue_id = ( id => $issue_id );
+                        $dbix_redmine->update( 'issues',
+                            \%closed_on,
+                            \%where_issue_id
+                        );
+                    }
+
                 }
 
                 $report{ journals_created } ++;
