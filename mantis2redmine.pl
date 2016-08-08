@@ -699,6 +699,15 @@ sub perform_import {
                     name       => 'documents'
                 } );
 
+                # activate trackers in projects
+                #foreach my $tracker_ref ( $dbix_redmine->query( 'SELECT DISTINCT(id) FROM trackers' )->list ) {
+                foreach my $tracker_ref ( 1, 2 ) {
+                    $dbix_redmine->insert( projects_trackers => {
+                        project_id => $map_ref->{ projects }->{ $old_id },
+                        tracker_id => $tracker_ref
+                    } );
+                }
+
                 # Add admins as manager to all projects
                 foreach my $admin_ref ( @mantis_admins ) {
                     $dbix_redmine->insert( members => {
