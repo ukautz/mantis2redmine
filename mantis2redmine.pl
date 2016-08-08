@@ -699,6 +699,11 @@ sub perform_import {
                     name       => 'documents'
                 } );
 
+                $dbix_redmine->insert( enabled_modules => {
+                    project_id => $map_ref->{ projects }->{ $old_id },
+                    name       => 'time_tracking'
+                } );
+
                 # activate trackers in projects
                 #foreach my $tracker_ref ( $dbix_redmine->query( 'SELECT DISTINCT(id) FROM trackers' )->list ) {
                 foreach my $tracker_ref ( 1, 2 ) {
@@ -989,6 +994,8 @@ SQL
 SELECT
     b.reporter_id,
     DATE_FORMAT( FROM_UNIXTIME( b.date_submitted ), '%Y-%m-%d %T' ) AS `created_on`,
+    b.time_tracking,
+    b.last_modified,
     tt.note
 FROM mantis_bugnote_table b
 LEFT JOIN mantis_bugnote_text_table tt ON ( tt.id = b.bugnote_text_id )
@@ -1081,6 +1088,20 @@ SQLNOTES
                     notes            => $note_ref->{ note },
                     created_on       => $note_ref->{ created_on },
                 } );
+                if ( $note_ref->{ time_tracking } ne 0 ) {
+                    $dbix_redmine->insert( time_entries => {
+                        project_id   => $map_ref->{ projects }->{ $issue_ref->{ project_id } },
+                        user_id      => $map_ref->{ users }->{ $note_ref->{ reporter_id } } || 2,
+                        issue_id     => $issue_id,
+                        activity_id  => 9, # development
+                        spent_on     => $note_ref->{ created_on },
+                        created_on   => $note_ref->{ created_on },
+                        updated_on   => $note_ref->{ last_modified },
+                        # min -> hours (two decimal places are sufficient)
+                        #hours        => sprintf("%.2f", $notes_ref->{ time_tracking } / 60 ),
+                        hours        => $note_ref->{ time_tracking } / 60,
+                    } );
+                }
             }
 
             $report{ journals_created } ++;
