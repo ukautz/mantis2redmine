@@ -1051,6 +1051,7 @@ SQLNOTES
                 created_on       => $issue_ref->{ created_on },
                 updated_on       => $issue_ref->{ updated_on },
                 start_date       => $issue_ref->{ start_date },
+                done_ratio       => ( $issue_ref->{ status } eq 90 ) || ( $issue_ref->{ status } eq 80 ) ? 100 : 0,
                 lft              => 1,
                 rgt              => 2,
                 fixed_version_id => $issue_ref->{ target_version } && defined $version_map{ $issue_ref->{ target_version } }
