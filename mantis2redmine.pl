@@ -975,7 +975,7 @@ SELECT
     b.target_version,
     b.fixed_in_version,
     b.severity,
-    c.id as `category_id`,
+    b.category_id,
     b.summary AS `subject`,
     DATE_FORMAT( FROM_UNIXTIME( b.date_submitted ), '%Y-%m-%d %T' ) AS `created_on`,
     DATE_FORMAT( FROM_UNIXTIME( b.date_submitted ), '%Y-%m-%d' ) AS `start_date`,
@@ -983,7 +983,6 @@ SELECT
     CONCAT_WS( "\n\n", tt.description, tt.steps_to_reproduce, tt.additional_information ) AS `description`
 FROM mantis_bug_table b
 LEFT JOIN mantis_bug_text_table tt ON ( tt.id = b.bug_text_id )
-LEFT JOIN mantis_category_table c ON ( c.name = b.category_id AND c.project_id = b.project_id )
 SQL
 
     my $notes_sql = <<SQLNOTES;
