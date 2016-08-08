@@ -1024,8 +1024,8 @@ SQLNOTES
         #print "$issue_ref->{ id }: $issue_ref->{ target_version } -> $version_map{ $issue_ref->{ target_version } }\n" if $issue_ref->{ target_version };
         #print "is feature: $issue_ref->{ subject } ( $opt{ tracker_id_feature } )\n" if ($issue_ref->{ severity } == 10);
 
-        my $trackerIdFeature = ($opt{ tracker_id_feature }) ? $opt{ tracker_id_feature } : 1;
-        my $trackerIdBug = ($opt{ tracker_id_bug }) ? $opt{ tracker_id_bug } : 2;
+        my $trackerIdFeature = ($opt{ tracker_id_feature }) ? $opt{ tracker_id_feature } : 2;
+        my $trackerIdBug = ($opt{ tracker_id_bug }) ? $opt{ tracker_id_bug } : 1;
 
         unless ( $DRY ) {
             # insert
