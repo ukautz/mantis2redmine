@@ -11,11 +11,11 @@ Description
 * Able to map Mantis data to coresponding Redmine data (eg users, projects and so on).
 * Fully user interactive (suggest what to map to what, but gives you the capability to change.. assume you have a highly configured Mantis installation).
 * Things you should keep in mind before migration:
-** Custom fields of the type multi list are not supported in Redmine.
-** Custom fields of the type checkbox with multiple values will be translated to simple lists.
-** Migrates only attachment files which are stored in the database (default).
-** Tested only with Mantis 1.2.0 (current) and Redmine 0.9.3 (debian current).
-** Make a backup of your Redmine database BEFORE you run the script (eg mysqldump..)!
+  * Custom fields of the type multi list are not supported in Redmine.
+  * Custom fields of the type checkbox with multiple values will be translated to simple lists.
+  * Migrates only attachment files which are stored in the database (default).
+  * Tested only with Mantis 1.2.0 (current) and Redmine 0.9.3 (debian current).
+  * Make a backup of your Redmine database BEFORE you run the script (eg mysqldump..)!
 
 
 Install
@@ -39,7 +39,7 @@ Example:
     mantis_db_name = mantis
     mantis_db_login = mantis_user
     mantis_db_pass = mantis_password
-    
+
     redmine_db_host = localhost
     redmine_db_name = redmine
     redmine_db_login = redmine_user

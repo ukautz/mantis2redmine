@@ -8,7 +8,7 @@ mantis2redmine.pl - Import Mantis database into Redmine
 
 This script imports provided Mantis database into existing Redmine database without destroying existing content in the redmine database. The idea is a non-destructive migration. Via user interaction re-mappings of mantis users, priojects and so on to Redmine equivalents can be performed.
 
-Tested with: 
+Tested with:
     Redmine 0.9.3-1 stable
     Mantis 1.2.4 stable
 
@@ -36,7 +36,7 @@ This would require the following packages on a debian system
 
 =item * It says "Load from file" ..
 
-You already ran this script once (eg in dry-run-mode). It will create store-<name>.map files within the current directory to save your answers. If you want to answer one (or all) of the mappings again simply remove the corresponding store-file (name should be self-explanatory.
+You already ran this script once (eg in dry-run-mode). It will create store-<name>.map files within the current directory to save your answers. If you want to answer one (or all) of the mappings again simply remove the corresponding store-file (name should be self-explanatory).
 
 =back
 
@@ -87,6 +87,9 @@ use DBIx::Simple;
 use Data::Dumper;
 use YAML;
 
+use utf8;
+use Encode;
+
 use version 0.74; our $VERSION = qv(v0.3.1);
 
 # Unbuffered output
@@ -99,22 +102,22 @@ my %opt;
 GetOptions(
     "dry_run|n" => \( my $DRY = 0 ),
     "help|h"    => \( $opt{ help } = 0 ),
-    
+
     "mantis_db_host=s"  => \( $opt{ mantis_db_host }  = "localhost" ),
     "mantis_db_name=s"  => \( $opt{ mantis_db_name }  = "mantis" ),
     "mantis_db_login=s" => \( $opt{ mantis_db_login } = "" ),
     "mantis_db_pass=s"  => \( $opt{ mantis_db_pass }  = "" ),
-    
+
     "redmine_db_host=s"  => \( $opt{ redmine_db_host }  = "localhost" ),
     "redmine_db_name=s"  => \( $opt{ redmine_db_name }  = "redmine" ),
     "redmine_db_login=s" => \( $opt{ redmine_db_login } = "" ),
     "redmine_db_pass=s"  => \( $opt{ redmine_db_pass }  = "" ),
-    
+
     "load_maps"  => \( $opt{ load_maps } ),
-    "config|c=s" => \( $opt{ config } = "" ), 
-    
+    "config|c=s" => \( $opt{ config } = "" ),
+
     "category_source" => \( $opt{ category_source } = "categories" ),
-    
+
     "attachment_dir=s" => \( $opt{ attachment_dir } = "attachments" )
 );
 
@@ -142,13 +145,13 @@ Options
     --attachment_dir <path>
         Direcory for outputting any attachment file.
         default: attachments (in current dir)
-    
+
     Import flavor:
     --category-source <source>
         You can either use "categories" or "trackers" as source for your
         newly created redmine categories.
         Default: "categories"
-    
+
     Mantis Database:
     --mantis_db_host <hostname>
         default: localhost
@@ -156,7 +159,7 @@ Options
         default: mantis
     --mantis_db_login <login>
     --mantis_db_pass <password>
-    
+
     Redmine Database:
     --redmine_db_host <hostname>
         default: localhost
@@ -164,7 +167,7 @@ Options
         default: redmine
     --redmine_db_login <login>
     --redmine_db_pass <password>
-    
+
 HELP
 
 
@@ -196,12 +199,12 @@ unless ( $DRY || read_in( "Are you sure you? Do you have a backup of your import
 }
 
 # open dbi
-my $dbix_mantis = DBIx::Simple->connect( 
+my $dbix_mantis = DBIx::Simple->connect(
     'DBI:mysql:database='. $opt{ mantis_db_name }. ';host='. $opt{ mantis_db_host },
     $opt{ mantis_db_login }, $opt{ mantis_db_pass },
     { RaiseError => 1, mysql_enable_utf8 => 1},
 );
-my $dbix_redmine = DBIx::Simple->connect( 
+my $dbix_redmine = DBIx::Simple->connect(
     'DBI:mysql:database='. $opt{ redmine_db_name }. ';host='. $opt{ redmine_db_host },
     $opt{ redmine_db_login }, $opt{ redmine_db_pass },
     { RaiseError => 1 }
@@ -226,7 +229,7 @@ foreach my $import( @import_modules ) {
     print " *** ". ucfirst( $import ). " ***\n\n";
     {
         no strict 'refs';
-        $map{ $import } = $opt{ load_maps } && -f "store-$import.map" 
+        $map{ $import } = $opt{ load_maps } && -f "store-$import.map"
             ? do {
                 print "-> Load from file\n";
                 load_map( $import )
@@ -264,7 +267,7 @@ sub import_stati {
         ( $_->{ position } => $_ )
     } $dbix_redmine->query( 'SELECT id, name, position FROM issue_statuses' )->hashes;
     my $default_ref = $redmine_stati{ 1 };
-    
+
     my %mantis_stati = (
         10 => [ "new", $redmine_stati{ 1 } ], # new
         20 => [ "feedback", $redmine_stati{ 4 } || $default_ref ], # feedback
@@ -274,7 +277,7 @@ sub import_stati {
         80 => [ "resolved", $redmine_stati{ 3 } || $default_ref ], # resolved
         90 => [ "closed", $redmine_stati{ 3 } || $default_ref ]  # closed
     );
-    
+
     return create_map( 'Status', \%mantis_stati, \%redmine_stati, $default_ref, 'position' );
 }
 
@@ -292,7 +295,7 @@ sub import_priorities {
         ( $_->{ position } => $_ )
     } $dbix_redmine->query( 'SELECT id, name, position FROM enumerations WHERE type = ?', 'IssuePriority' )->hashes;
     my $default_ref = $redmine{ 1 };
-    
+
     my %mantis = (
         10 => [ 'none', $redmine{ 1 } ], # none
         20 => [ 'low', $redmine{ 1 } ], # low
@@ -301,7 +304,7 @@ sub import_priorities {
         50 => [ 'urgent', $redmine{ 4 } || $default_ref ], # urgent
         60 => [ 'immediate', $redmine{ 5 } || $default_ref ]  # immediate
     );
-    
+
     return create_map( 'Priority', \%mantis, \%redmine, $default_ref, 'position' );
 }
 
@@ -319,7 +322,7 @@ sub import_roles {
         ( $_->{ position } => $_ )
     } $dbix_redmine->query( 'SELECT id, name, position FROM roles' )->hashes;
     my $default_ref = $redmine{ scalar keys %redmine };
-    
+
     my %mantis = (
         10 => [ 'viewer', $default_ref ],   # viewer
         25 => [ 'reporter', $redmine{ 5 } || $default_ref ],   # reporter
@@ -328,7 +331,7 @@ sub import_roles {
         70 => [ 'manager', $redmine{ 3 } || $default_ref ],   # manager
         90 => [ 'administrator', $redmine{ 3 } || $default_ref ]    # administrator
     );
-    
+
     return create_map( 'Role', \%mantis, \%redmine, $default_ref, 'position' );
 }
 
@@ -391,12 +394,12 @@ sub import_projects {
     my ( $first_mantis_id ) = sort keys %mantis;
     die "Did not find any mantis projects\n"
         unless $first_mantis_id;
-    
+
     my %redmine = map {
         ( $_->{ id } => $_ );
     } $dbix_redmine->query( 'SELECT id, name FROM projects' )->hashes;
     my ( $first_id ) = sort keys %redmine;
-    
+
     my $mantis_ref = { map {
         ( $_ => [ $mantis{ $_ }->{ name }, { name => 'new', id => -1 } ] )
     } keys %mantis };
@@ -404,18 +407,18 @@ sub import_projects {
         ( $_ => $redmine{ $_ } )
     } keys %redmine };
     premap( $mantis_ref, $redmine_ref, 'name' );
-    
+
     my $default_ref = $first_id
         ? $redmine{ $first_id }
         : { id => -1, name => '*no project found in redmine*' }
     ;
-    
+
     my $new_ref = create_map( 'Project', $mantis_ref, $redmine_ref, $default_ref, 'id', {
         allow_new     => 1,
         print_mantis  => 1,
         print_redmine => 1
     } );
-    
+
     my $ref = update_maps( $new_ref, \%mantis );
     print Dumper $ref;
     return $ref;
@@ -432,20 +435,20 @@ User interactive.
 =cut
 
 sub import_versions {
-    
+
     #my $sql_version_table = 'SELECT id, version, description, project_id, DATE_FORMAT( date, \'%Y-%m-%d\' ) as date, released FROM mantis_project_version_table';
     my $sql_version_table = 'SELECT id, version, description, project_id, released FROM mantis_project_version_table';
     my %mantis = map {
         $_->{ name } = substr( delete $_->{ version }, 0, 30 );
         ( $_->{ id } => $_ );
     } $dbix_mantis->query( $sql_version_table )->hashes;
-    
+
     my %redmine = map {
         ( $_->{ id } => $_ );
     } $dbix_redmine->query( 'SELECT id, name FROM versions' )->hashes;
     my ( $first_id ) = sort keys %redmine;
-    
-    
+
+
     my $mantis_ref = { map {
         ( $_ => [ $mantis{ $_ }->{ name }, { name => 'new', id => -1 } ] )
     } keys %mantis };
@@ -453,18 +456,18 @@ sub import_versions {
         ( $_ => $redmine{ $_ } )
     } keys %redmine };
     premap( $mantis_ref, $redmine_ref, 'name' );
-    
+
     my $default_ref = $first_id
         ? $redmine{ $first_id }
         : { id => -1, name => '*no version found in redmine*' }
     ;
-    
+
     my $new_ref = create_map( 'Version', $mantis_ref, $redmine_ref, $default_ref, 'id', {
         allow_new     => 1,
         print_mantis  => 1,
         print_redmine => 1
     } );
-    
+
     return update_maps( $new_ref, \%mantis );
 }
 
@@ -479,13 +482,13 @@ User interactive.
 sub import_trackers {
     my %mantis = map {
         ( $_->{ id } => $_ );
-    } $dbix_mantis->query( 'SELECT id, name, project_id FROM mantis_category_table' )->hashes;
-    
+    } $dbix_mantis->query( 'SELECT id, category as name, project_id FROM mantis__category_table' )->hashes;
+
     my %redmine = map {
         ( $_->{ id } => $_ );
     } $dbix_redmine->query( 'SELECT id, name FROM trackers' )->hashes;
     my ( $first_id ) = sort keys %redmine;
-    
+
     my $mantis_ref = { map {
         ( $_ => [ $mantis{ $_ }->{ name }, { name => 'new', id => -1 } ] )
     } keys %mantis };
@@ -493,13 +496,13 @@ sub import_trackers {
         ( $_ => $redmine{ $_ } )
     } keys %redmine };
     premap( $mantis_ref, $redmine_ref, 'name' );
-    
+
     my $new_ref = create_map( 'Tracker', $mantis_ref, $redmine_ref, $redmine{ $first_id }, 'id', {
        allow_new     => 1,
        print_mantis  => 1,
        print_redmine => 1
     } );
-    
+
     return update_maps( $new_ref, \%mantis );
 }
 
@@ -515,12 +518,12 @@ sub import_categories {
     my %mantis = map {
         ( $_->{ id } => $_ );
     } $dbix_mantis->query( 'SELECT id, name, project_id FROM mantis_category_table' )->hashes;
-    
+
     my %redmine = map {
         ( $_->{ id } => $_ );
     } $dbix_redmine->query( 'SELECT id, name FROM issue_categories' )->hashes;
     my ( $first_id ) = sort keys %redmine;
-    
+
     my $mantis_ref = { map {
         ( $_ => [ $mantis{ $_ }->{ name }, { name => 'new', id => -1 } ] )
     } keys %mantis };
@@ -528,18 +531,18 @@ sub import_categories {
         ( $_ => $redmine{ $_ } )
     } keys %redmine };
     premap( $mantis_ref, $redmine_ref, 'name' );
-    
+
     my $default_ref = $first_id
         ? $redmine{ $first_id }
         : { id => -1, name => '*no category found in redmine*' }
     ;
-    
+
     my $new_ref = create_map( 'Category', $mantis_ref, $redmine_ref, $default_ref, 'id', {
         allow_new     => 1,
         print_mantis  => 1,
         print_redmine => 1
     } );
-    
+
     return update_maps( $new_ref, \%mantis );
 }
 
@@ -565,13 +568,13 @@ sub import_users {
         $_->{ login } = delete $_->{ username };
         ( $_->{ id } => $_ );
     } $dbix_mantis->query( 'SELECT id, username, realname, email, access_level >= 90 as admin FROM mantis_user_table' )->hashes;
-    
+
     my %redmine = map {
         ( $_->{ id } => $_ );
     } $dbix_redmine->query( 'SELECT id, login, firstname, lastname, mail FROM users' )->hashes;
     my ( $first_id ) = sort keys %redmine;
-    
-    
+
+
     my $mantis_ref = { map {
         ( $_ => [ $mantis{ $_ }->{ login }, { name => 'new', id => -1 } ] )
     } keys %mantis };
@@ -579,8 +582,8 @@ sub import_users {
         ( $_ => { name => $redmine{ $_ }->{ login }, id => $redmine{ $_ }->{ id } } )
     } keys %redmine };
     premap( $mantis_ref, $redmine_ref, 'name' );
-    
-    
+
+
     my $default_ref = $first_id
         ? $redmine{ $first_id }
         : {
@@ -593,13 +596,13 @@ sub import_users {
             lastname => '*no user found in redmine*',
         }
     ;
-    
+
     my $new_ref = create_map( 'User', $mantis_ref, $redmine_ref, $default_ref, 'id', {
         allow_new     => 1,
         print_mantis  => 1,
         print_redmine => 1
     } );
-    
+
     return update_maps( $new_ref, \%mantis );
 }
 
@@ -614,17 +617,17 @@ User interactive.
 
 sub perform_import {
     my ( $map_ref ) = @_;
-    
+
     my %report = ();
-    
+
     print "Import Users\n";
     while( my ( $old_id, $new_ref ) = each %{ $map_ref->{ users } } ) {
         print ".";
-        
+
         # create new user
         if ( $new_ref->{ id } == -1 ) {
             delete $new_ref->{ id };
-            
+
             unless ( $DRY ) {
                 $dbix_redmine->insert( users => {
                     %$new_ref, # firstname, lastname, login, mail, admin
@@ -633,36 +636,36 @@ sub perform_import {
                 } );
                 ( $map_ref->{ users }->{ $old_id } ) = $dbix_redmine->query( 'SELECT MAX(id) FROM users' )->list;
             }
-            
+
             $report{ users_created } ++;
         }
-        
+
         # use existing
         else {
             $map_ref->{ users }->{ $old_id } = $new_ref->{ id };
             $report{ users_migrated } ++;
         }
     }
-    print "OK\n";   
-    
+    print "OK\n";
+
     print "Import Projects\n";
     my $count = 1;
     while( my ( $old_id, $new_ref ) = each %{ $map_ref->{ projects } } ) {
         print ".";
-        
+
         # create new project
         if ( $new_ref->{ id } == -1 ) {
             delete $new_ref->{ id };
-            
+
             # get max lft/rgt
             my ( $lft, $rgt ) = $dbix_redmine->query( 'SELECT MAX( lft ), MAX(rgt) FROM projects' )->list;
             $lft ||= 0;
             $rgt ||= 0;
             my $max = $lft > $rgt ? $lft : $rgt;
             $max++;
-            
+
             unless ( $DRY ) {
-                
+
                 $dbix_redmine->insert( projects => {
                     %$new_ref, # name
                     description => 'Imported from Mantis',
@@ -675,11 +678,31 @@ sub perform_import {
                     rgt         => $max+1
                 } );
                 ( $map_ref->{ projects }->{ $old_id } ) = $dbix_redmine->query( 'SELECT MAX(id) FROM projects' )->list;
+
+                $dbix_redmine->insert( enabled_modules => {
+                    project_id => $map_ref->{ projects }->{ $old_id },
+                    name       => 'issue_tracking'
+                } );
+
+                $dbix_redmine->insert( enabled_modules => {
+                    project_id => $map_ref->{ projects }->{ $old_id },
+                    name       => 'files'
+                } );
+
+                $dbix_redmine->insert( enabled_modules => {
+                    project_id => $map_ref->{ projects }->{ $old_id },
+                    name       => 'calendar'
+                } );
+
+                $dbix_redmine->insert( enabled_modules => {
+                    project_id => $map_ref->{ projects }->{ $old_id },
+                    name       => 'gantt'
+                } );
             }
-            
+
             $report{ projects_created } ++;
         }
-        
+
         # use existing
         else {
             $map_ref->{ projects }->{ $old_id } = $new_ref->{ id };
@@ -687,18 +710,18 @@ sub perform_import {
         }
     }
     print "OK\n";
-    
+
     print "Import Versions\n";
     my %version_map = ();
     while( my ( $old_id, $new_ref ) = each %{ $map_ref->{ versions } } ) {
         print ".";
-        
+
         # create new version
         if ( $new_ref->{ id } == -1 ) {
             delete $new_ref->{ id };
             my $project_id = $map_ref->{ projects }->{ delete $new_ref->{ project_id } };
             my $released   = $new_ref->{ released } ? 'closed' : 'open';
-            
+
             unless ( $DRY ) {
                 $dbix_redmine->insert( versions => {
                     name            => $new_ref->{ name },
@@ -714,10 +737,10 @@ sub perform_import {
                 $version_map{ $new_ref->{ name } } =
                 $map_ref->{ versions }->{ $old_id } = 'NEW';
             }
-            
+
             $report{ versions_created } ++;
         }
-        
+
         # use existing
         else {
             $version_map{ $new_ref->{ name } } = $map_ref->{ versions }->{ $old_id } = $new_ref->{ id };
@@ -725,25 +748,25 @@ sub perform_import {
         }
     }
     print "OK\n";
-    
+
     # use Trackers -> Categories
     if ( $opt{ category_source } eq 'trackers' ) {
         print "Import Trackers\n";
         my @project_ids = $dbix_redmine->query( 'SELECT id FROM projects' )->flat;
         while( my ( $old_id, $new_ref ) = each %{ $map_ref->{ trackers } } ) {
             print ".";
-            
+
             # create new tracker
             if ( $new_ref->{ id } == -1 ) {
                 delete $new_ref->{ id };
-                
+
                 # get tracker probs
                 my $name       = delete $new_ref->{ name };
                 my $project_id = delete $new_ref->{ project_id };
                 my ( $position ) = $dbix_redmine->query( 'SELECT MAX(position)+1 FROM trackers' )->list;
-                
+
                 unless ( $DRY ) {
-                    
+
                     # create tracker
                     $dbix_redmine->insert( trackers => {
                         name          => $name,
@@ -752,7 +775,7 @@ sub perform_import {
                         is_in_chlog   => 0,
                     } );
                     ( $map_ref->{ trackers }->{ $old_id } ) = $dbix_redmine->query( 'SELECT MAX(id) FROM trackers' )->list;
-                    
+
                     # link tracker to project(s)
                     my @insert = $project_id == 0 ? @project_ids : ( $map_ref->{ projects }->{ $project_id } );
                     foreach my $insert( @insert ) {
@@ -762,10 +785,10 @@ sub perform_import {
                         } );
                     }
                 }
-                
+
                 $report{ trackers_created } ++;
             }
-            
+
             # use existing
             else {
                 $map_ref->{ trackers }->{ $old_id } = $new_ref->{ id };
@@ -774,35 +797,35 @@ sub perform_import {
         }
         print "OK\n";
     }
-    
+
     # use Categories -> Categories (default)
     else {
         print "Import Categories\n";
         my @category_ids = $dbix_redmine->query( 'SELECT id FROM issue_categories' )->flat;
         while( my ( $old_id, $new_ref ) = each %{ $map_ref->{ categories } } ) {
             print ".";
-            
+
             # create new category
             if ( $new_ref->{ id } == -1 ) {
                 delete $new_ref->{ id };
-                
+
                 # get category probs
                 my $name       = delete $new_ref->{ name };
-                my $project_id = delete $new_ref->{ project_id };
-                
+                my $project_id = $map_ref->{ projects }->{ delete $new_ref->{ project_id } };
+
                 unless ( $DRY ) {
-                    
+
                     # create category
-                    $dbix_redmine->insert( issue_categories => {
-                        name          => $name,
-                        project_id    => $project_id
-                    } );
-                    ( $map_ref->{ categories }->{ $old_id } ) = $dbix_redmine->query( 'SELECT MAX(id) FROM issue_categories' )->list;
+                    #$dbix_redmine->insert( issue_categories => {
+                    #    name          => $name,
+                    #    project_id    => $project_id
+                    #} );
+                    #( $map_ref->{ categories }->{ $old_id } ) = $dbix_redmine->query( 'SELECT MAX(id) FROM issue_categories' )->list;
                 }
-                
+
                 $report{ categories_created } ++;
             }
-            
+
             # use existing
             else {
                 $map_ref->{ categories }->{ $old_id } = $new_ref->{ id };
@@ -811,8 +834,8 @@ sub perform_import {
         }
         print "OK\n";
     }
-    
-    
+
+
     # now the hard part .. import all issues!
     print "Import Issues (. = Issue, - = Journal, + = Attachment)\n";
     my $issues = $dbix_mantis->query( <<SQL );
@@ -825,33 +848,34 @@ SELECT
     b.status,
     b.target_version,
     b.severity,
-    b.category_id,
+    c.id as `category_id`,
     b.summary AS `subject`,
-    DATE_FORMAT( FROM_UNIXTIME( b.date_submitted ), '%Y-%m-%d %T' ) AS `created_on`,
-    DATE_FORMAT( FROM_UNIXTIME( b.date_submitted ), '%Y-%m-%d' ) AS `start_date`,
-    DATE_FORMAT( FROM_UNIXTIME( b.last_updated ), '%Y-%m-%d %T' ) AS `updated_on`,
-    CONCAT_WS( "\n\n", tt.description, tt.steps_to_reproduce, tt.additional_information ) AS `description` 
+    b.date_submitted AS `created_on`,
+    b.date_submitted AS `start_date`,
+    b.last_updated AS `updated_on`,
+    CONCAT_WS( "\n\n", tt.description, tt.steps_to_reproduce, tt.additional_information ) AS `description`
 FROM mantis_bug_table b
 LEFT JOIN mantis_bug_text_table tt ON ( tt.id = b.bug_text_id )
+LEFT JOIN mantis_category_table c ON ( c.name = b.category_id AND c.project_id = b.project_id )
 SQL
-    
+
     my $notes_sql = <<SQLNOTES;
 SELECT
     b.reporter_id,
-    DATE_FORMAT( FROM_UNIXTIME( b.date_submitted ), '%Y-%m-%d %T' ) AS `created_on`,
+    b.date_submitted  AS `created_on`,
     tt.note
 FROM mantis_bugnote_table b
 LEFT JOIN mantis_bugnote_text_table tt ON ( tt.id = b.bugnote_text_id )
 WHERE
     b.bug_id = ?
 SQLNOTES
-    
+
     my $attachments_sql = <<SQLNOTES;
 SELECT
     b.diskfile,
     b.filename,
     b.file_type,
-    DATE_FORMAT( FROM_UNIXTIME( b.date_added ), '%Y-%m-%d %T' ) AS `created_on`,
+    b.date_added AS `created_on`,
     CONCAT_WS( "\n", b.title, b.description ) AS `description`,
     b.content
 FROM mantis_bug_file_table b
@@ -868,28 +892,28 @@ SQLNOTES
     my %issue_map = ();
     while ( my $issue_ref = $issues->hash ) {
         print ".";
-        
+
         my $issue_id;
-        
+
         #print "$issue_ref->{ id }: $issue_ref->{ target_version } -> $version_map{ $issue_ref->{ target_version } }\n" if $issue_ref->{ target_version };
         #print "is feature: $issue_ref->{ subject } ( $opt{ tracker_id_feature } )\n" if ($issue_ref->{ severity } == 10);
-        
+
         my $trackerIdFeature = ($opt{ tracker_id_feature }) ? $opt{ tracker_id_feature } : 1;
         my $trackerIdBug = ($opt{ tracker_id_bug }) ? $opt{ tracker_id_bug } : 2;
-        
+
         unless ( $DRY ) {
             # insert
             $dbix_redmine->insert( issues => my $ref = {
             	# severity 10 => feature / alle anderen -> bug
                 tracker_id       => ($issue_ref->{ severity } == 10) ? $trackerIdFeature : $trackerIdBug,
                 project_id       => $map_ref->{ projects }->{ $issue_ref->{ project_id } },
-                category_id      => $map_ref->{ projects }->{ $issue_ref->{ category_id } },
-                subject          => $issue_ref->{ subject },
-                description      => $issue_ref->{ description },
+                category_id      => $map_ref->{ categories }->{ $issue_ref->{ category_id } },
+                subject          => encode( "UTF-8", $issue_ref->{ subject } ),
+                description      => encode( "UTF-8", $issue_ref->{ description } ),
                 status_id        => $map_ref->{ stati }->{ $issue_ref->{ status } }->{ id },
                 assigned_to_id   => $map_ref->{ users }->{ $issue_ref->{ handler_id } },
                 priority_id      => $map_ref->{ priorities }->{ $issue_ref->{ priority } }->{ id },
-                author_id        => $map_ref->{ users }->{ $issue_ref->{ reporter_id } },
+                author_id        => $map_ref->{ users }->{ $issue_ref->{ reporter_id } } || 2,
                 created_on       => $issue_ref->{ created_on },
                 updated_on       => $issue_ref->{ updated_on },
                 start_date       => $issue_ref->{ start_date },
@@ -899,52 +923,51 @@ SQLNOTES
                     ? $version_map{ $issue_ref->{ target_version } }
                     : 0
             } );
-            
+
             # get id of the issue
             ( $issue_id ) = $dbix_redmine->query( 'SELECT MAX(id) FROM issues' )->list;
             $issue_map{ $issue_ref->{ id } } = $issue_id;
         }
-        
+
         $report{ issues_created } ++;
-        
+
         # insert notes
         my $notes = $dbix_mantis->query( $notes_sql, $issue_ref->{ id } );
         while ( my $note_ref = $notes->hash ) {
             print "-";
-            
+
             unless ( $DRY ) {
-                
+
                 # insert
                 $dbix_redmine->insert( journals => {
                     journalized_id   => $issue_id,
                     journalized_type => 'Issue',
-                    user_id          => $map_ref->{ users }->{ $note_ref->{ reporter_id } },
-                    notes            => $note_ref->{ note },
+                    user_id          => $map_ref->{ users }->{ $note_ref->{ reporter_id } } || 2,
+                    notes            => encode( "UTF-8", $note_ref->{ note } ),
                     created_on       => $note_ref->{ created_on },
                 } );
             }
-            
+
             $report{ journals_created } ++;
         }
-        
+
         # insert attachments
         if (! $opt{ attachments_in_db } ) {
             my $attachments = $dbix_mantis->query( $attachments_sql, $issue_ref->{ id } );
             while ( my $attachment_ref = $attachments->hash ) {
                 # we have the attachments in the db -> exit
-                last;
                 print "+";
-                
+
                 unless ( $DRY ) {
-                    
+
                     # write file to disk
-                    my $filename = "$attachment_ref->{ diskfile }_$attachment_ref->{ filename }";
+                    my $filename = "$attachment_ref->{ diskfile }";
                     my $output = "$opt{ attachment_dir }/$filename";
                     open my $fh, '>', $output or die "Cannot open attachment file '$output' for write: $!";
                     binmode $fh;
                     print $fh delete $attachment_ref->{ content };
                     close $fh;
-                    
+
                     # insert
                     $dbix_redmine->insert( attachments => {
                         container_id   => $issue_id,
@@ -968,9 +991,9 @@ SQLNOTES
         # set root_id to id for redmine to work properly
         $dbix_redmine->query( 'UPDATE issues SET root_id=id WHERE root_id IS NULL;' );
     }
-    
+
     print "OK\n";
-    
+
     print "Import Relations\n";
     my $relations = $dbix_mantis->query( <<SQLRELATIONS );
 SELECT
@@ -980,10 +1003,10 @@ SELECT
 FROM
     mantis_bug_relationship_table
 SQLRELATIONS
-    
+
     while( my $relation_ref = $relations->hash ) {
         print ".";
-        
+
         unless ( $DRY ) {
             $dbix_redmine->insert( issue_relations => {
                 issue_from_id => $issue_map{ $relation_ref->{ source_bug_id } },
@@ -994,7 +1017,7 @@ SQLRELATIONS
         $report{ relations_created } ++;
     }
     print "OK\n";
-    
+
     print "Import Custom Fields (. = Definition, - = Project relation, + = Issue value)\n";
     my $custom_fields = $dbix_mantis->query( <<SQLRELATIONS );
 SELECT
@@ -1009,7 +1032,7 @@ SELECT
 FROM
     mantis_custom_field_table
 SQLRELATIONS
-    
+
     my @tracker_ids = $dbix_redmine->query( 'SELECT id FROM trackers' )->flat;
     while( my $custom_field_ref = $custom_fields->hash ) {
         print ".";
@@ -1019,7 +1042,7 @@ SQLRELATIONS
                 ? 'list'
                 : $map_ref->{ custom_fields }->{ $custom_field_ref->{ type } }
             ;
-            
+
             my $ref = {
                 name            => substr( $custom_field_ref->{ name }, 0, 30 ),
                 field_format    => $field_format,
@@ -1032,21 +1055,21 @@ SQLRELATIONS
             };
             #$dbix_redmine->insert( custom_fields => $ref );
             #print Dumper $ref;
-            
+
             # there is some issue with multiline .. hmm.. stragen enough:
             my $sql = 'INSERT INTO custom_fields ('. join( ', ', map { "`$_`" } sort keys %$ref ). ') VALUES ('. join( ', ', map { "?" } sort keys %$ref ). ')';
             my @sql_values = map { $ref->{ $_ } } sort keys %$ref;
-            #print "$sql : ". join( ", ", @sql_values ). "\n"; 
+            #print "$sql : ". join( ", ", @sql_values ). "\n";
             $dbix_redmine->query( $sql, @sql_values );
-            
+
             my ( $custom_field_id ) = $dbix_redmine->query( 'SELECT MAX(id) FROM custom_fields' )->list;
-            
+
             # associate with all trackers
             $dbix_redmine->insert( custom_fields_trackers => {
                 custom_field_id => $custom_field_id,
                 tracker_id      => $_
             } ) for @tracker_ids;
-            
+
             # get projects and re-associate fields
             my @assoc_project_ids = $dbix_mantis->query( 'SELECT project_id FROM mantis_custom_field_project_table WHERE field_id = ?', $custom_field_ref->{ id } )->flat;
             #die Dumper { assoc => \@assoc_project_ids, projects => $map_ref->{ projects } };
@@ -1057,8 +1080,8 @@ SQLRELATIONS
                     project_id      => $map_ref->{ projects }->{ $pid }
                 } );
             }
-            
-            
+
+
             # set all custom field values to issues
             my $custom_field_values = $dbix_mantis->query( 'SELECT bug_id, value FROM mantis_custom_field_string_table WHERE field_id = ?', $custom_field_ref->{ id } );
             while( my $field_value_ref = $custom_field_values->hash ) {
@@ -1067,15 +1090,15 @@ SQLRELATIONS
                     customized_type => 'Issue',
                     customized_id   => $issue_map{ $field_value_ref->{ bug_id } },
                     custom_field_id => $custom_field_id,
-                    value           => $field_value_ref->{ value }
+                    value           => encode( "UTF-8", $field_value_ref->{ value } )
                 } );
             }
         }
-        
+
         $report{ custom_fields_created } ++;
     }
     print "OK\n";
-    
+
     print "\n\nAll Done\n";
     printf "%-40s : %5d / %5d\n", 'Users (migrated/created)', $report{ users_migrated } || 0, $report{ users_created } || 0;
     printf "%-40s : %5d / %5d\n", 'Projects (migrated/created)', $report{ projects_migrated } || 0, $report{ projects_created } || 0;
@@ -1093,9 +1116,9 @@ SQLRELATIONS
     }
     else {
         print "** Import completed, have fun! **\n";
-        print "You should copy now all extracted files from '$opt{ attachment_dir }/' to your attachment directory of redmine (usually '/files' in your redmine install dir)\n"; 
+        print "You should copy now all extracted files from '$opt{ attachment_dir }/' to your attachment directory of redmine (usually '/files' in your redmine install dir)\n";
     }
-    
+
 }
 
 
@@ -1157,8 +1180,8 @@ sub create_map {
         print_mantis  => 0,
         print_redmine => 0
     };
-    
-    
+
+
     my $legend_sub = sub {
         print "Mantis: $name\n";
         foreach my $position( sort keys %$mantis_ref ) {
@@ -1171,7 +1194,7 @@ sub create_map {
         }
         print "\n";
     };
-    
+
     my $translation_sub = sub {
         print "$name translation\n";
         printf "    %-20s ->     %-20s\n", "Mantis", "Redmine";
@@ -1186,17 +1209,17 @@ sub create_map {
     $legend_sub->();
     $translation_sub->();
     my ( $last_mantis ) = ( reverse sort keys %$mantis_ref );
-    
+
     my @request = ();
     my $request_new = $args_ref->{ allow_new } ? " or num:-1 for create as new " : "";
     push @request,"Type 'ok' if you confirm or num:num ${request_new}to change assignment";
-    
+
     my $myname = $default_ref->{ name } || $default_ref->{ login };
     push @request,"  eg $last_mantis:$default_ref->{ $key } to change $name of '$mantis_ref->{ $last_mantis }->[0]' to '$myname'";
     push @request, "  type 'print' to show the Redmine/Mantis tabels again";
     push @request, "(ok/num:num/print)";
     my $request = join( "\n", @request );
-    
+
     my $read = read_in( $request );
     while ( lc( $read ) ne 'ok' ) {
         if ( $read =~ /^(\d+):(\d+)$/ ) {
@@ -1225,7 +1248,7 @@ sub create_map {
         }
         $read = read_in( $request );
     }
-    
+
     # return map of ( number => id )
     return { map {
         ( $_ => $mantis_ref->{ $_ }->[1] );
