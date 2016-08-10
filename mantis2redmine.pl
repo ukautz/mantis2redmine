@@ -87,9 +87,6 @@ use DBIx::Simple;
 use Data::Dumper;
 use YAML;
 
-use utf8;
-use Encode;
-
 use version 0.74; our $VERSION = qv(v0.3.1);
 
 # Unbuffered output
@@ -908,8 +905,8 @@ SQLNOTES
                 tracker_id       => ($issue_ref->{ severity } == 10) ? $trackerIdFeature : $trackerIdBug,
                 project_id       => $map_ref->{ projects }->{ $issue_ref->{ project_id } },
                 category_id      => $map_ref->{ categories }->{ $issue_ref->{ category_id } },
-                subject          => encode( "UTF-8", $issue_ref->{ subject } ),
-                description      => encode( "UTF-8", $issue_ref->{ description } ),
+                subject          => $issue_ref->{ subject },
+                description      => $issue_ref->{ description },
                 status_id        => $map_ref->{ stati }->{ $issue_ref->{ status } }->{ id },
                 assigned_to_id   => $map_ref->{ users }->{ $issue_ref->{ handler_id } },
                 priority_id      => $map_ref->{ priorities }->{ $issue_ref->{ priority } }->{ id },
@@ -943,7 +940,7 @@ SQLNOTES
                     journalized_id   => $issue_id,
                     journalized_type => 'Issue',
                     user_id          => $map_ref->{ users }->{ $note_ref->{ reporter_id } } || 2,
-                    notes            => encode( "UTF-8", $note_ref->{ note } ),
+                    notes            => $note_ref->{ note },
                     created_on       => $note_ref->{ created_on },
                 } );
             }
@@ -1090,7 +1087,7 @@ SQLRELATIONS
                     customized_type => 'Issue',
                     customized_id   => $issue_map{ $field_value_ref->{ bug_id } },
                     custom_field_id => $custom_field_id,
-                    value           => encode( "UTF-8", $field_value_ref->{ value } )
+                    value           => $field_value_ref->{ value }
                 } );
             }
         }
