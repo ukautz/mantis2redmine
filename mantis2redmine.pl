@@ -9,8 +9,8 @@ mantis2redmine.pl - Import Mantis database into Redmine
 This script imports provided Mantis database into existing Redmine database without destroying existing content in the redmine database. The idea is a non-destructive migration. Via user interaction re-mappings of mantis users, priojects and so on to Redmine equivalents can be performed.
 
 Tested with:
-    Redmine 0.9.3-1 stable
-    Mantis 1.2.4 stable
+    Redmine 2.6.6 stable
+    Mantis 1.2.19 stable
 
 Inspired by "migrate_from_mantis.rake" from the Redmine project.
 
@@ -745,9 +745,9 @@ SQLQUERY
                     my $documents = $dbix_mantis->query( $documents_sql, $old_id );
                     while ( my $documents_ref = $documents->hash ) {
                         print "+";
-        
+
                         unless ( $DRY ) {
-        
+
                             # write file to disk
                             my $filename = "$documents_ref->{ diskfile }";
                             my $output = "$opt{ attachment_dir }/$filename";
@@ -755,7 +755,7 @@ SQLQUERY
                             binmode $fh;
                             print $fh delete $documents_ref->{ content };
                             close $fh;
-        
+
                             # insert
                             $dbix_redmine->insert( documents => {
                                 project_id     => $map_ref->{ projects }->{ $old_id },
@@ -807,7 +807,7 @@ SQLQUERY
     print "OK\n";
 
     print "Import Members\n";
-    
+
    my $mantis_members = $dbix_mantis->query( <<SQLMEMBERS );
 SELECT
     project_id,
